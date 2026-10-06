@@ -32,3 +32,4 @@ CLAUDE.local.md
 
 # Local run state
 .run/
+.cache/

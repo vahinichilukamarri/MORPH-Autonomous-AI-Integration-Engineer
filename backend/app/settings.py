@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     embedding_provider: Literal["fastembed", "fake"] = "fastembed"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     embedding_cache_dir: str | None = None
+    # Spec files given to POST /systems/ingest must live under this directory.
+    spec_root: Path = ENV_FILE.parent
 
 
 @lru_cache

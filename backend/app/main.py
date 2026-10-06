@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import text
 
+from app.api.discovery import router as discovery_router
 from app.db import get_engine
 from app.settings import get_settings
 
@@ -17,7 +18,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().cors_origins,
-        allow_methods=["GET"],
+        allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
 
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
             database = "unavailable"
         return Health(status="ok" if database == "ok" else "degraded", database=database)
 
+    app.include_router(discovery_router)
     return app
 
 

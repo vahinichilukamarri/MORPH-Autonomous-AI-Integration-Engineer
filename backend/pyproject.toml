@@ -36,6 +36,12 @@ strict = true
 plugins = ["pydantic.mypy"]
 files = ["app", "tests"]
 
+[[tool.mypy.overrides]]
+module = ["fastembed", "fastembed.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "-m 'not slow'"
+markers = ["slow: needs the real embedding model (downloads it); run with `pytest -m slow`"]

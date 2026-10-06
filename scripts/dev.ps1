@@ -4,11 +4,16 @@
 .EXAMPLE
   ./scripts/dev.ps1 up
   ./scripts/dev.ps1 test
+  ./scripts/dev.ps1 test-slow
+  ./scripts/dev.ps1 ingest crm mock_systems/openapi/crm.v1.json
+  ./scripts/dev.ps1 ingest crm http://localhost:8101/openapi.json
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('up', 'down', 'test', 'lint', 'reset-db')]
-    [string]$Command
+    [ValidateSet('up', 'down', 'test', 'test-slow', 'lint', 'reset-db', 'ingest')]
+    [string]$Command,
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$Rest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +31,13 @@ function Invoke-Native {
 function Invoke-Uv {
     $uv = Get-Command uv -ErrorAction SilentlyContinue
     if ($uv) { Invoke-Native 'uv' $args } else { Invoke-Native 'python' (@('-m', 'uv') + $args) }
+}
+
+function Set-EmbeddingCache {
+    # Keep the downloaded embedding model in a git-ignored folder, not the temp directory.
+    if (-not $env:EMBEDDING_CACHE_DIR) {
+        $env:EMBEDDING_CACHE_DIR = Join-Path $Root '.cache/fastembed'
+    }
 }
 
 function Import-DotEnv {
@@ -71,11 +83,12 @@ function Stop-Background {
 switch ($Command) {
     'up' {
         Import-DotEnv
+        Set-EmbeddingCache
         Stop-Background
         Invoke-Native 'docker' @('compose', '--project-directory', $Root, 'up', '-d', '--build', '--wait')
         Push-Location (Join-Path $Root 'backend')
         try {
-            Invoke-Uv sync --frozen
+            Invoke-Uv sync --frozen --group embeddings
             Invoke-Uv run alembic upgrade head
         } finally { Pop-Location }
         Start-Background 'backend' (Join-Path $Root 'backend') `
@@ -97,6 +110,32 @@ switch ($Command) {
             if (-not (Test-Path (Join-Path $Root "$proj/pyproject.toml"))) { continue }
             Push-Location (Join-Path $Root $proj)
             try { Invoke-Uv run pytest -q } finally { Pop-Location }
+        }
+    }
+    'test-slow' {
+        # Tests that need the real embedding model (downloaded on first run).
+        Set-EmbeddingCache
+        Push-Location (Join-Path $Root 'backend')
+        try {
+            Invoke-Uv sync --frozen --group embeddings
+            Invoke-Uv run pytest -m slow -q
+        } finally { Pop-Location }
+    }
+    'ingest' {
+        if ($Rest.Count -ne 2) { throw 'usage: dev.ps1 ingest <name> <spec path or url>' }
+        $name, $source = $Rest
+        if ($source -match '^https?://') {
+            $spec = @{ url = $source }
+        } else {
+            $spec = @{ file = (Resolve-Path $source).Path }
+        }
+        $body = @{ name = $name; source = $spec } | ConvertTo-Json -Depth 4
+        try {
+            # The first call downloads the embedding model, so allow plenty of time.
+            Invoke-RestMethod -Method Post -Uri 'http://localhost:8000/systems/ingest' `
+                -ContentType 'application/json' -Body $body -TimeoutSec 900 | ConvertTo-Json
+        } catch {
+            if ($_.ErrorDetails.Message) { Write-Error $_.ErrorDetails.Message } else { throw }
         }
     }
     'lint' {
