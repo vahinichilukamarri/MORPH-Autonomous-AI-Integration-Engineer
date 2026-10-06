@@ -178,8 +178,12 @@ def test_groq_retries_429_honouring_retry_after() -> None:
         return chat_response(GOOD)
 
     rec = Recorder(chat, ("openai/gpt-oss-120b",))
-    result = rec.provider().complete_structured(REQUEST, Answer)
+    events: list[tuple[float, int]] = []
+    result = rec.provider(
+        on_rate_limit=lambda wait, n: events.append((wait, n))
+    ).complete_structured(REQUEST, Answer)
     assert result.value is not None
+    assert events == [(7.0, 1), (7.0, 2)], "each honoured wait is reported"
     assert rec.sleeps == [7.0, 7.0]
     assert len(rec.chat_calls) == 3
     assert result.attempts[0].metadata.http_attempts == 3

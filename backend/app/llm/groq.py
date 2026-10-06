@@ -49,6 +49,7 @@ class GroqProvider(BaseLLMProvider):
         wall_clock_budget_s: float = 600.0,
         reasoning_effort: str | None = "low",
         default_max_output_tokens: int = 4000,
+        on_rate_limit: Callable[[float, int], None] | None = None,
         transport: httpx.BaseTransport | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
@@ -60,6 +61,7 @@ class GroqProvider(BaseLLMProvider):
         self._reasoning_effort = reasoning_effort
         self._default_max_tokens = default_max_output_tokens
         self._sleep = sleep
+        self._on_rate_limit = on_rate_limit
         self._clock = clock
         self._available_checked = False
         self._client = httpx.Client(base_url=base_url, timeout=timeout_s, transport=transport)
@@ -148,6 +150,8 @@ class GroqProvider(BaseLLMProvider):
                     "wall-clock budget (daily or long-window limit)",
                     retry_after,
                 )
+            if self._on_rate_limit is not None:
+                self._on_rate_limit(retry_after, attempt)
             self._sleep(retry_after)
 
     def complete_raw(self, request: LLMRequest, response_model: type[BaseModel]) -> RawCompletion:
