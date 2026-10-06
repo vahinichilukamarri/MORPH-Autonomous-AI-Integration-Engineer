@@ -314,6 +314,13 @@ def to_record(
             validation_status=by_target[g.target_field].validation.status.value
             if g.target_field in by_target
             else "-",
+            lossy_codes=tuple(
+                r.code.value
+                for r in by_target[g.target_field].validation.reasons
+                if r.code.value.startswith("INFORMATION_LOSS")
+            )
+            if g.target_field in by_target
+            else (),
         )
         for g in grade.fields
     )

@@ -385,14 +385,14 @@ def test_the_command_line_refuses_unsafe_combinations(capsys: pytest.CaptureFixt
 def test_a_real_run_without_a_key_is_refused_not_a_crash(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    from app.settings import get_settings
+    from app.settings import Settings
 
-    get_settings.cache_clear()
+    # hermetic: ignore any real key in the environment or in a local .env file
+    keyless = Settings(_env_file=None, groq_api_key=None)
+    monkeypatch.setattr("scripts.run_mapping_eval.get_settings", lambda: keyless)
     code = main(
         ["--provider", "groq", "--configs", "B", "--store-dir", str(tmp_path), "--scenarios", "x"]
     )
-    get_settings.cache_clear()
     assert code == 2
     assert "GROQ_API_KEY" in capsys.readouterr().err
 

@@ -31,6 +31,7 @@ class FieldRecord:
     expected: str
     review_status: str
     validation_status: str
+    lossy_codes: tuple[str, ...] = ()  # INFORMATION_LOSS_* warnings the validator raised
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ class RunRecord:
                 expected=f["expected"],
                 review_status=f["review_status"],
                 validation_status=f["validation_status"],
+                lossy_codes=tuple(f.get("lossy_codes", ())),
             )
             for f in raw["fields"]
         )
@@ -318,6 +320,84 @@ def _calibration(records: Sequence[RunRecord]) -> list[str]:
     return lines
 
 
+@dataclass(frozen=True)
+class LossyBreakdown:
+    """Informational: how lossy mappings were handled. Not part of the fully-correct score."""
+
+    unrecoverable: int  # fields the key marks UNRESOLVED
+    declined: int  # proposed UNRESOLVED
+    guessed_flagged: int  # proposed a value but flagged it for review
+    guessed_silent: int  # proposed a value and did not flag it
+    lossy_proposals: int  # proposals the validator marked as losing information
+    lossy_flagged: int
+    lossy_silent: int
+
+
+def lossy_breakdown(records: Iterable[RunRecord]) -> LossyBreakdown:
+    unrecoverable = declined = flagged_guess = silent_guess = 0
+    lossy = lossy_flagged = 0
+    for record in records:
+        for f in record.fields:
+            g = f.grade
+            if g.expected_type == "UNRESOLVED":
+                unrecoverable += 1
+                if g.proposed_type == "UNRESOLVED":
+                    declined += 1
+                elif g.flagged:
+                    flagged_guess += 1
+                else:
+                    silent_guess += 1
+            if f.lossy_codes and g.proposed_type != "UNRESOLVED":
+                lossy += 1
+                lossy_flagged += 1 if g.flagged else 0
+    return LossyBreakdown(
+        unrecoverable,
+        declined,
+        flagged_guess,
+        silent_guess,
+        lossy,
+        lossy_flagged,
+        lossy - lossy_flagged,
+    )
+
+
+def _lossy(records: Sequence[RunRecord]) -> list[str]:
+    rows = []
+    for config in CONFIG_NAMES:
+        subset = _select(records, config=config)
+        if not subset:
+            continue
+        b = lossy_breakdown(subset)
+        rows.append(
+            [
+                CONFIG_NAMES[config],
+                fraction(b.declined, b.unrecoverable),
+                fraction(b.guessed_flagged, b.unrecoverable),
+                fraction(b.guessed_silent, b.unrecoverable),
+                fraction(b.lossy_flagged, b.lossy_proposals),
+                fraction(b.lossy_silent, b.lossy_proposals),
+            ]
+        )
+    header = [
+        "Configuration",
+        "Unrecoverable fields: declined (UNRESOLVED)",
+        "Unrecoverable fields: proposed but flagged for review",
+        "Unrecoverable fields: silent guess",
+        "Validator-detected lossy proposals: flagged for review",
+        "Validator-detected lossy proposals: not flagged",
+    ]
+    return [
+        "Informational only; not part of the fully-correct score. *Unrecoverable* fields are the "
+        "ones the answer key marks UNRESOLVED, where the source cannot supply the value. A "
+        "*silent guess* is a value proposed for such a field without a review flag; a *proposed "
+        "but flagged* one at least reaches a human. *Validator-detected lossy proposals* are "
+        "proposals that raised an information-loss warning (for example a many-to-one enum map), "
+        "whether or not the key allows them.",
+        "",
+        *_table(header, rows),
+    ]
+
+
 def _mistakes(records: Sequence[RunRecord]) -> list[str]:
     rows: list[list[str]] = []
     for r in sorted(records, key=lambda r: (r.scenario_id, r.config, r.run_index)):
@@ -403,6 +483,9 @@ def render_set(label: str, records: Sequence[RunRecord]) -> list[str]:
         "### Reliability and cost",
         "",
         *_operations(records),
+        "### Lossy mappings: flagged versus silent",
+        "",
+        *_lossy(records),
         "### Confidence versus accuracy",
         "",
         "Fully correct fraction by confidence bucket (and for flagged vs auto-accepted mappings).",
