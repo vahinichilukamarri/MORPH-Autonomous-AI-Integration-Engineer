@@ -101,7 +101,7 @@ class ReplayLLMProvider(BaseLLMProvider):
 
 
 class CachingProvider(BaseLLMProvider):
-    """On-disk cache in front of another provider; ``read=False`` bypasses reads but still writes."""
+    """On-disk cache in front of a provider; ``read=False`` skips reads but still writes."""
 
     def __init__(
         self,
