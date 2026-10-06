@@ -1,0 +1,621 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mock CRM",
+    "description": "Mock enterprise CRM. snake_case fields, string customer ids, E.164 phones.",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/customers": {
+      "get": {
+        "summary": "List customers",
+        "operationId": "list_customers_customers_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "1-based page number."
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page.",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON."
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key header."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a customer",
+        "operationId": "create_customer_customers_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON."
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key header."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{customer_id}": {
+      "get": {
+        "summary": "Get a customer",
+        "operationId": "get_customer_customers__customer_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Customer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON."
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key header."
+          },
+          "404": {
+            "description": "Customer not found."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Partially update a customer",
+        "operationId": "patch_customer_customers__customer_id__patch",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Customer Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON."
+          },
+          "401": {
+            "description": "Missing or invalid X-API-Key header."
+          },
+          "404": {
+            "description": "Customer not found."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Customer": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "pattern": "^C-\\d+$",
+            "title": "Customer Id",
+            "description": "Unique customer identifier: the letter 'C', a hyphen and decimal digits.",
+            "examples": [
+              "C-1837"
+            ]
+          },
+          "first_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "First Name",
+            "description": "Given name of the customer. Required.",
+            "examples": [
+              "Asha"
+            ]
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name",
+            "description": "Family name of the customer. Null when the customer has no recorded surname.",
+            "examples": [
+              "Verma"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@ ]+@[^@ ]+\\.[^@ ]+$",
+            "title": "Email",
+            "description": "Primary contact email address. Required.",
+            "examples": [
+              "asha.verma@example.com"
+            ]
+          },
+          "phone_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+[1-9]\\d{7,14}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Contact phone number in E.164 format (leading '+', country code, digits only). Null when unknown.",
+            "examples": [
+              "+919876543210"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus",
+            "description": "Lifecycle status of the customer account.",
+            "examples": [
+              "ACTIVE"
+            ]
+          },
+          "segment": {
+            "$ref": "#/components/schemas/CustomerSegment",
+            "description": "Commercial segment the customer belongs to.",
+            "examples": [
+              "MIDMARKET"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Creation time as an ISO-8601 UTC datetime string ending in 'Z'.",
+            "examples": [
+              "2024-03-05T10:15:30Z"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "first_name",
+          "last_name",
+          "email",
+          "phone_number",
+          "status",
+          "segment",
+          "created_at"
+        ],
+        "title": "Customer"
+      },
+      "CustomerCreate": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "First Name",
+            "description": "Given name of the customer. Required.",
+            "examples": [
+              "Asha"
+            ]
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name",
+            "description": "Family name of the customer. Null when the customer has no recorded surname.",
+            "examples": [
+              "Verma"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@ ]+@[^@ ]+\\.[^@ ]+$",
+            "title": "Email",
+            "description": "Primary contact email address. Required.",
+            "examples": [
+              "asha.verma@example.com"
+            ]
+          },
+          "phone_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+[1-9]\\d{7,14}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Contact phone number in E.164 format (leading '+', country code, digits only). Null when unknown.",
+            "examples": [
+              "+919876543210"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus",
+            "description": "Lifecycle status of the customer account.",
+            "default": "ACTIVE",
+            "examples": [
+              "ACTIVE"
+            ]
+          },
+          "segment": {
+            "$ref": "#/components/schemas/CustomerSegment",
+            "description": "Commercial segment the customer belongs to.",
+            "examples": [
+              "MIDMARKET"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "first_name",
+          "email",
+          "segment"
+        ],
+        "title": "CustomerCreate"
+      },
+      "CustomerPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Customer"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "Customers on the requested page."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page",
+            "description": "1-based page number that was returned.",
+            "examples": [
+              1
+            ]
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page Size",
+            "description": "Maximum number of items per page.",
+            "examples": [
+              20
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total number of customers across all pages.",
+            "examples": [
+              50
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "CustomerPage"
+      },
+      "CustomerPatch": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "First Name",
+            "description": "Given name of the customer. Required.",
+            "examples": [
+              "Asha"
+            ]
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name",
+            "description": "Family name of the customer. Null when the customer has no recorded surname.",
+            "examples": [
+              "Verma"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@ ]+@[^@ ]+\\.[^@ ]+$",
+            "title": "Email",
+            "description": "Primary contact email address. Required.",
+            "examples": [
+              "asha.verma@example.com"
+            ]
+          },
+          "phone_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+[1-9]\\d{7,14}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone",
+            "description": "Contact phone number in E.164 format (leading '+', country code, digits only). Null when unknown.",
+            "examples": [
+              "+919876543210"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/CustomerStatus",
+            "description": "Lifecycle status of the customer account.",
+            "examples": [
+              "ACTIVE"
+            ]
+          },
+          "segment": {
+            "$ref": "#/components/schemas/CustomerSegment",
+            "description": "Commercial segment the customer belongs to.",
+            "examples": [
+              "MIDMARKET"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CustomerPatch",
+        "description": "Partial update. Only the fields present in the request body are changed."
+      },
+      "CustomerSegment": {
+        "type": "string",
+        "enum": [
+          "SMB",
+          "MIDMARKET",
+          "ENTERPRISE"
+        ],
+        "title": "CustomerSegment"
+      },
+      "CustomerStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE",
+          "SUSPENDED"
+        ],
+        "title": "CustomerStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "description": "CRM API key.",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

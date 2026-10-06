@@ -1,0 +1,443 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mock Support",
+    "description": "Mock support desk. camelCase fields, numeric user ids, epoch timestamps.",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/users/{userId}": {
+      "get": {
+        "summary": "Get a user",
+        "operationId": "get_user_users__userId__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Userid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed strict validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Create or replace a user (upsert)",
+        "operationId": "put_user_users__userId__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Userid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed strict validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "User created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "post": {
+        "summary": "Create a user",
+        "operationId": "create_user_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body is not parseable JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed strict validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A user with this userId exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountState": {
+        "type": "string",
+        "enum": [
+          "ENABLED",
+          "DISABLED",
+          "BLOCKED"
+        ],
+        "title": "AccountState"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "examples": [
+              "VALIDATION_ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "location": {
+            "type": "string",
+            "title": "Location",
+            "description": "Where the problem is: body, path or query.",
+            "examples": [
+              "body"
+            ]
+          },
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Name of the offending field.",
+            "examples": [
+              "phoneNumber"
+            ]
+          },
+          "expected": {
+            "type": "string",
+            "title": "Expected",
+            "description": "What the field must satisfy."
+          },
+          "received": {
+            "title": "Received",
+            "description": "The value that was received (null when missing)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "location",
+          "field",
+          "expected",
+          "received"
+        ],
+        "title": "ErrorDetail"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "Tier": {
+        "type": "string",
+        "enum": [
+          "STANDARD",
+          "PRIORITY"
+        ],
+        "title": "Tier"
+      },
+      "User": {
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Userid",
+            "description": "Numeric user identifier. For users imported from the CRM this is the numeric part of the CRM customer id (C-1837 -> 1837).",
+            "examples": [
+              1837
+            ]
+          },
+          "externalRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalref",
+            "description": "Reference to the originating system record, e.g. the original CRM customer id. Null when the user was not imported.",
+            "examples": [
+              "C-1837"
+            ]
+          },
+          "fullName": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[^ ]+( [^ ]+)*$",
+            "title": "Fullname",
+            "description": "Display name: first and last name joined by a single space, trimmed. Only the first name when the person has no last name.",
+            "examples": [
+              "Asha Verma"
+            ]
+          },
+          "email_address": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@ ]+@[^@ ]+\\.[^@ ]+$",
+            "title": "Email Address",
+            "description": "Contact email address.",
+            "examples": [
+              "asha.verma@example.com"
+            ]
+          },
+          "phoneNumber": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[1-9]\\d{7,14}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phonenumber",
+            "description": "Phone number as digits only: country code and number, no '+', no separators. Null when unknown.",
+            "examples": [
+              "919876543210"
+            ]
+          },
+          "accountState": {
+            "$ref": "#/components/schemas/AccountState",
+            "description": "Whether the user may use the support portal.",
+            "examples": [
+              "ENABLED"
+            ]
+          },
+          "serviceTier": {
+            "$ref": "#/components/schemas/Tier",
+            "description": "Support service tier.",
+            "examples": [
+              "STANDARD"
+            ]
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Createdat",
+            "description": "Creation time as an integer count of seconds since the Unix epoch (UTC).",
+            "examples": [
+              1709633730
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "userId",
+          "fullName",
+          "email_address",
+          "accountState",
+          "serviceTier",
+          "createdAt"
+        ],
+        "title": "User"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Support API bearer token.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

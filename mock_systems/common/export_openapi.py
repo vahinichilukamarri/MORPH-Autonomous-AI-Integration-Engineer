@@ -1,23 +1,34 @@
-"""Write the clean (v1) OpenAPI contract of each mock system to ``mock_systems/openapi/``.
+"""Write the OpenAPI contracts (clean v1 and drifted v2) of each mock system to ``openapi/``.
 
 Run from ``mock_systems/``: ``uv run python -m common.export_openapi``.
 The bench answer-key validator reads these files, and a test fails when they go stale.
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from fastapi import FastAPI
+
+from common.faults import FaultProfile
 from crm.main import create_app as create_crm_app
 from support.main import create_app as create_support_app
 
 OPENAPI_DIR = Path(__file__).resolve().parents[1] / "openapi"
 
 
+def _spec(factory: Callable[[], FastAPI], version: str) -> dict[str, Any]:
+    app = factory()
+    app.state.faults.set_profile(FaultProfile(contract_version=version))
+    return app.openapi()
+
+
 def current_specs() -> dict[str, dict[str, Any]]:
     return {
-        "crm.v1.json": create_crm_app().openapi(),
-        "support.v1.json": create_support_app().openapi(),
+        f"{name}.{version}.json": _spec(factory, version)
+        for name, factory in (("crm", create_crm_app), ("support", create_support_app))
+        for version in ("v1", "v2")
     }
 
 
