@@ -507,6 +507,10 @@ def main(
     embedder: EmbeddingProvider
     if embedder_override is not None:
         embedder = embedder_override
+    elif args.report_only:
+        from app.embeddings.fake import FakeEmbeddingProvider  # never used when only reporting
+
+        embedder = FakeEmbeddingProvider()
     elif args.test_only:
         from app.embeddings.fake import FakeEmbeddingProvider
 

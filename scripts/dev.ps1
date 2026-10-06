@@ -7,10 +7,11 @@
   ./scripts/dev.ps1 test-slow
   ./scripts/dev.ps1 ingest crm mock_systems/openapi/crm.v1.json
   ./scripts/dev.ps1 ingest crm http://localhost:8101/openapi.json
+  ./scripts/dev.ps1 mapping-eval --n-runs 1
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('up', 'down', 'test', 'test-slow', 'lint', 'reset-db', 'ingest')]
+    [ValidateSet('up', 'down', 'test', 'test-slow', 'lint', 'reset-db', 'ingest', 'mapping-eval')]
     [string]$Command,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
@@ -137,6 +138,14 @@ switch ($Command) {
         } catch {
             if ($_.ErrorDetails.Message) { Write-Error $_.ErrorDetails.Message } else { throw }
         }
+    }
+    'mapping-eval' {
+        # The real mapping evaluation (needs GROQ_API_KEY in .env); arguments go to the script.
+        Set-EmbeddingCache
+        Push-Location (Join-Path $Root 'bench')
+        try {
+            Invoke-Uv run --group embeddings python -m scripts.run_mapping_eval @Rest
+        } finally { Pop-Location }
     }
     'lint' {
         foreach ($proj in $PythonProjects) {
