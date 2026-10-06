@@ -224,3 +224,109 @@ describe their fields generously (see the caveats in `docs/discovery.md`), the s
 mappings, and what retrieval cannot do (pick between candidates, say a mapping is
 TRANSFORMATION or DERIVED, produce `C-1837` -> `1837`) is exactly what v0.3 must add.
 
+## v0.3-mapping
+
+The first LLM step: retrieval-augmented mapping proposals, deterministic validation, confidence
+and review flags, versioned persistence, and a grader and evaluation against hand-written answer
+keys on four scenarios. Design, DSL, validation rules and the confidence formula:
+`docs/mapping.md`. The answer-key judgement calls: `docs/answer-key-notes.md`.
+
+### What exists
+
+| Area | Where |
+|---|---|
+| Provider layer (Groq, Ollama, replay, cache, scripted) | `backend/app/llm/` |
+| Transformation DSL, agent, validation, confidence, runner, review | `backend/app/mapping/` |
+| Versioned prompt templates (v1, frozen) | `backend/app/mapping/prompts/v1/` |
+| Mapping tables (migration `0003`) and API | `backend/app/db_models.py`, `backend/app/api/mapping.py` |
+| Sample records of the mock systems | `mock_systems/samples/` |
+| Four scenarios, answer keys, reference pipelines, checksum manifest | `bench/scenarios/`, `bench/references/` |
+| Grader and evaluation script | `bench/morph_bench/grader.py`, `bench/scripts/run_mapping_eval.py` |
+
+### Run and verify without an API key (PowerShell, from the repo root)
+
+```powershell
+docker compose up -d --wait postgres
+./scripts/dev.ps1 lint
+./scripts/dev.ps1 test
+```
+
+All LLM behaviour is tested with fake and replay providers; CI never touches the network. The
+tests create and drop their own throwaway databases.
+
+### Run the mapping API with a real model (needs GROQ_API_KEY)
+
+Put the key in the gitignored `.env` at the repo root (never commit it):
+
+```powershell
+Add-Content .env 'GROQ_API_KEY=<your key>'
+./scripts/dev.ps1 up
+./scripts/dev.ps1 ingest crm http://localhost:8101/openapi.json
+./scripts/dev.ps1 ingest support http://localhost:8102/openapi.json
+$b = 'http://localhost:8000'
+$run = Invoke-RestMethod -Method Post "$b/mapping-runs" -ContentType 'application/json' -Body (@{
+  source_system_version = 1; target_system_version = 2
+  source_entity = 'Customer'; target_entity = 'User'; mode = 'rag' } | ConvertTo-Json)
+$run.summary
+Invoke-RestMethod "$b/mapping-runs/$($run.id)/mappings" | ForEach-Object { $_ } |
+  Select-Object target_field, @{n='type';e={$_.current.mapping_type}},
+    @{n='validation';e={$_.current.validation_status}}, @{n='review';e={$_.current.review_status}},
+    @{n='confidence';e={$_.current.confidence}} | Format-Table
+```
+
+(`source_system_version` and `target_system_version` are system *version ids* from
+`GET /systems/{id}/versions`; adjust them if your database has other versions.) Approve or
+override one mapping, then list its versions:
+
+```powershell
+Invoke-RestMethod -Method Post "$b/mappings/1/review" -ContentType 'application/json' -Body '{"action":"approve"}'
+Invoke-RestMethod "$b/mappings/1/versions" | ForEach-Object { $_ } | Select-Object version, author, review_status
+```
+
+### Run the real evaluation
+
+Needs `GROQ_API_KEY` in `.env`. The model defaults to `openai/gpt-oss-120b` (`GROQ_MODEL`). The
+first run is N=1 and also records the replay fixtures for scenario 1:
+
+```powershell
+./scripts/dev.ps1 mapping-eval --n-runs 1 --record-replays crm_customer_to_support_user
+```
+
+Groq's free tier is rate limited, so this can take a long while and may stop with "stopped by a
+rate limit". Every finished call is saved in `.cache/mapping-eval/`; run the **same command
+again** later and it resumes without repeating finished calls. An interrupted run writes its
+partial report to `.run/mapping-eval.partial.md`, never to `docs/`. When it finishes it writes
+`docs/mapping-eval.md` (generated entirely from the saved results), which you review and commit.
+
+Repeated runs to expose variance are a separate, later run that reuses the saved N=1 results:
+
+```powershell
+./scripts/dev.ps1 mapping-eval --n-runs 3
+```
+
+Re-render the report from saved results without calling the model:
+
+```powershell
+./scripts/dev.ps1 mapping-eval --report-only
+```
+
+### Re-record replays
+
+Replays are keyed by the SHA-256 of the full prompt, so they must be re-recorded whenever a
+prompt template, the retrieval context or the response schema changes. Recording only happens on
+real network calls, so use a fresh store directory:
+
+```powershell
+./scripts/dev.ps1 mapping-eval --scenarios crm_customer_to_support_user --configs B,C `
+  --record-replays crm_customer_to_support_user --store-dir .cache/rerecord
+```
+
+Fixtures land in `bench/replays/`. CI replays scenario 1 in `full_schema` mode (the RAG replay
+depends on real embeddings and is checked locally).
+
+### Frozen before the first real run
+
+Prompt templates v1 and the confidence constants are frozen (a test enforces it). Any change
+after the first real run is prompt v2 or confidence formula v2 and appears in
+`docs/mapping-eval.md` as a separate labelled run set.
+
