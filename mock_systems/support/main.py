@@ -8,10 +8,12 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from common.faults import install_faults
 from support.models import ErrorBody, ErrorDetail, ErrorResponse, User
 from support.store import UserStore
 
 DEFAULT_TOKEN = "support-dev-token"
+V2_RENAMES = {"tier": "serviceTier"}
 _bearer = HTTPBearer(auto_error=False, description="Support API bearer token.")
 
 _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
@@ -51,7 +53,7 @@ def _validation_details(exc: RequestValidationError) -> list[ErrorDetail]:
     return details
 
 
-def create_app(token: str | None = None) -> FastAPI:
+def create_app(token: str | None = None, admin_token: str | None = None) -> FastAPI:
     expected_token = token or os.environ.get("SUPPORT_TOKEN", DEFAULT_TOKEN)
     store = UserStore()
 
@@ -131,6 +133,15 @@ def create_app(token: str | None = None) -> FastAPI:
             response.status_code = 201
         return body
 
+    install_faults(
+        app,
+        admin_token=admin_token,
+        renames=V2_RENAMES,
+        reset_state=store.reset,
+        error_body=lambda status, message: {
+            "error": {"code": "INJECTED_FAULT", "message": message, "details": []}
+        },
+    )
     return app
 
 

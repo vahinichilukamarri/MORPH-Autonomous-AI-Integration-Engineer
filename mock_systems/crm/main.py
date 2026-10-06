@@ -5,14 +5,16 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Query, Security
 from fastapi.security import APIKeyHeader
 
+from common.faults import install_faults
 from crm.models import Customer, CustomerCreate, CustomerPage, CustomerPatch
 from crm.store import CustomerStore
 
 DEFAULT_API_KEY = "crm-dev-key"
+V2_RENAMES = {"phone": "phone_number"}
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False, description="CRM API key.")
 
 
-def create_app(api_key: str | None = None) -> FastAPI:
+def create_app(api_key: str | None = None, admin_token: str | None = None) -> FastAPI:
     expected = api_key or os.environ.get("CRM_API_KEY", DEFAULT_API_KEY)
     store = CustomerStore()
 
@@ -64,6 +66,13 @@ def create_app(api_key: str | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Customer not found.")
         return customer
 
+    install_faults(
+        app,
+        admin_token=admin_token,
+        renames=V2_RENAMES,
+        reset_state=store.reset,
+        error_body=lambda _status, message: {"detail": message},
+    )
     return app
 
 
