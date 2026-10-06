@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+
+# Secrets and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local tooling (never committed)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
