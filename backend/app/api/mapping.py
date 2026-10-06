@@ -49,6 +49,13 @@ class MappingRunRequest(BaseModel):
     source_entity: str
     target_entity: str
     mode: Literal["rag", "full_schema"] = "rag"
+    requirement: str | None = Field(
+        default=None,
+        max_length=4000,
+        description="The business requirement, written by the operator. It is shown to the model "
+        "as a trusted section, separate from the untrusted spec data. Do not pass text taken "
+        "from specs or from end users here.",
+    )
 
 
 class MappingRunOut(BaseModel):
@@ -63,6 +70,7 @@ class MappingRunOut(BaseModel):
     prompt_version: str
     confidence_version: str
     temperature: float
+    requirement: str | None
     summary: dict[str, Any]
     run_reasons: list[Any]
     created_at: datetime
@@ -144,6 +152,7 @@ def create_run(
             source_entity=body.source_entity,
             target_entity=body.target_entity,
             mode=body.mode,
+            requirement=body.requirement,
             samples_dir=settings.samples_dir,
             temperature=settings.llm_temperature,
             max_output_tokens=settings.llm_max_output_tokens,

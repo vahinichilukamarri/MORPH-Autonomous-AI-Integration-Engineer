@@ -294,6 +294,14 @@ scalars = st.one_of(
     st.floats(allow_nan=True, allow_infinity=True),
     st.text(max_size=40),
 )
+# Constants and enum targets inside a pipeline travel as JSON, which cannot carry NaN or infinity.
+json_scalars = st.one_of(
+    st.none(),
+    st.booleans(),
+    st.integers(min_value=-(10**18), max_value=10**18),
+    st.floats(allow_nan=False, allow_infinity=False),
+    st.text(max_size=40),
+)
 FIELDS = ["a", "b", "c"]
 field_names = st.sampled_from([*FIELDS, "missing"])
 short_text = st.text(min_size=1, max_size=6)
@@ -309,7 +317,7 @@ source_steps = st.one_of(
     st.builds(
         lambda fs: {"op": "COALESCE", "fields": fs}, st.lists(field_names, min_size=1, max_size=3)
     ),
-    st.builds(lambda v: {"op": "CONSTANT", "value": v}, scalars),
+    st.builds(lambda v: {"op": "CONSTANT", "value": v}, json_scalars),
 )
 value_steps = st.one_of(
     st.builds(lambda t: {"op": "CAST", "to": t}, st.sampled_from(["int", "str", "float", "bool"])),
@@ -321,7 +329,7 @@ value_steps = st.one_of(
     st.builds(
         lambda k, v, d: {"op": "MAP_ENUM", "mapping": {k: v}, "on_unmapped": d, "default": "?"},
         short_text,
-        scalars,
+        json_scalars,
         st.sampled_from(["error", "default"]),
     ),
     st.builds(

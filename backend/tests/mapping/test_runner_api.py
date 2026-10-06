@@ -413,3 +413,35 @@ def test_nothing_is_stored_when_a_run_fails(
 
 def test_samples_directory_exists_for_the_default_settings() -> None:
     assert Path(Settings().samples_dir).is_dir()
+
+
+def test_the_requirement_is_accepted_shown_to_the_model_and_stored(
+    client: TestClient, versions: tuple[IngestResult, IngestResult], session: Session
+) -> None:
+    seen: list[LLMRequest] = []
+
+    def recording(request: LLMRequest) -> str:
+        seen.append(request)
+        return reply_for(target_of(request))
+
+    client.app.dependency_overrides[get_llm] = lambda: ScriptedFakeProvider(responder=recording)  # type: ignore[attr-defined]
+    crm, support = versions
+    text = "Enterprise customers are entitled to priority support."
+    response = client.post(
+        "/mapping-runs",
+        json={
+            "source_system_version": crm.version_id,
+            "target_system_version": support.version_id,
+            "source_entity": "Customer",
+            "target_entity": "User",
+            "mode": "full_schema",
+            "requirement": text,
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["requirement"] == text
+    assert seen and all(text in r.parts[0] and text not in r.system for r in seen)
+    stored = session.scalars(select(MappingRun)).one()
+    assert stored.requirement == text
+    plain = start_run(client, versions)
+    assert plain["requirement"] is None

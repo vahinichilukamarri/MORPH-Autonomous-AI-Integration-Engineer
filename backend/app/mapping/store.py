@@ -68,6 +68,7 @@ def save_run(session: Session, result: MappingRunResult, temperature: float) -> 
         prompt_version=PROMPT_VERSION,
         confidence_version=CONFIDENCE_VERSION,
         temperature=temperature,
+        requirement=result.requirement,
         summary=result.summary,
         run_reasons=[{"code": r.code.value, "detail": r.detail} for r in result.run_reasons],
     )

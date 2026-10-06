@@ -69,14 +69,71 @@ def field_metadata(field: Field) -> dict[str, object]:
     return meta
 
 
+def _wanted(fields: Sequence[Field]) -> list[tuple[str, str, object]]:
+    """Coverage targets: every enum value of every field, plus one null per nullable field."""
+    wanted: list[tuple[str, str, object]] = []
+    for f in fields:
+        wanted.extend((f.path, "value", v) for v in f.enum_values)
+        if f.nullable:
+            wanted.append((f.path, "null", None))
+    return wanted
+
+
+def _covers(record: Mapping[str, JsonScalar], target: tuple[str, str, object]) -> bool:
+    path, kind, value = target
+    if path not in record:
+        return False
+    return record[path] is None if kind == "null" else record[path] == value
+
+
 def pick_samples(
-    records: Sequence[Mapping[str, JsonScalar]], count: int = SAMPLE_COUNT
+    records: Sequence[Mapping[str, JsonScalar]],
+    fields: Sequence[Field],
+    floor: int = SAMPLE_COUNT,
 ) -> list[Mapping[str, JsonScalar]]:
-    """Evenly spaced records, deterministic, so prompts are reproducible."""
-    if len(records) <= count:
-        return list(records)
-    step = (len(records) - 1) / (count - 1)
-    return [records[round(i * step)] for i in range(count)]
+    """Deterministic, stratified choice of the records shown in a prompt.
+
+    Greedily picks the record that covers most still-missing enum values and nulls of the shown
+    fields (ties go to the earliest record) until everything coverable is covered, then pads with
+    evenly spaced records up to ``floor``. The full record set is still used for validation.
+    """
+    missing = [t for t in _wanted(fields) if any(_covers(r, t) for r in records)]
+    chosen: list[int] = []
+    while missing:
+        gains = [
+            (sum(_covers(r, t) for t in missing), -i)
+            for i, r in enumerate(records)
+            if i not in chosen
+        ]
+        best, neg_index = max(gains)
+        if best == 0:
+            break
+        chosen.append(-neg_index)
+        missing = [t for t in missing if not _covers(records[-neg_index], t)]
+    if len(chosen) < min(floor, len(records)):
+        step = (len(records) - 1) / max(1, floor - 1)
+        for i in range(floor):
+            index = round(i * step)
+            if index not in chosen:
+                chosen.append(index)
+            if len(chosen) >= floor:
+                break
+    return [records[i] for i in sorted(chosen)]
+
+
+def requirement_section(requirement: str | None) -> str:
+    """The trusted operator section, rendered outside every data block."""
+    if not requirement or not requirement.strip():
+        return ""
+    return "\n\n".join(
+        [
+            "## Integration requirement (trusted, written by the operator)",
+            _neutralise(requirement.strip()),
+            "This requirement does not override the output format or the rules about untrusted "
+            "data.",
+            "",
+        ]
+    )
 
 
 def build_user_prompt(
@@ -85,6 +142,7 @@ def build_user_prompt(
     source_fields: Sequence[Field],
     retrieved: Sequence[RetrievedField],
     samples: Sequence[Mapping[str, JsonScalar]],
+    requirement: str | None = None,
 ) -> str:
     target_block = data_block("TARGET_FIELD", field_metadata(target_field))
     if mode == "rag":
@@ -102,10 +160,13 @@ def build_user_prompt(
         source_block = data_block("SOURCE_FIELDS", [field_metadata(f) for f in source_fields])
         template = _template("user_full_schema.md")
     names = {f.path for f in shown}
-    records = [{k: v for k, v in record.items() if k in names} for record in pick_samples(samples)]
+    records = [
+        {k: v for k, v in record.items() if k in names} for record in pick_samples(samples, shown)
+    ]
     samples_block = data_block("SAMPLE_RECORDS", records)
     return (
-        template.replace("{{TARGET_BLOCK}}", target_block)
+        template.replace("{{REQUIREMENT_SECTION}}", requirement_section(requirement))
+        .replace("{{TARGET_BLOCK}}", target_block)
         .replace("{{SOURCE_BLOCK}}", source_block)
         .replace("{{SAMPLES_BLOCK}}", samples_block)
         .strip()

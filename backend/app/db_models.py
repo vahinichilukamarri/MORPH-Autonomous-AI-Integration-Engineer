@@ -173,6 +173,7 @@ class MappingRun(Base):
     prompt_version: Mapped[str] = mapped_column(String(16))
     confidence_version: Mapped[str] = mapped_column(String(32))
     temperature: Mapped[float] = mapped_column(Float)
+    requirement: Mapped[str | None] = mapped_column(Text)
     summary: Mapped[dict[str, Any]] = mapped_column(JSONB)
     run_reasons: Mapped[list[Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

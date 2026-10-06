@@ -74,6 +74,7 @@ class MappingRunResult:
     target_version_id: int = 0
     source_entity: str = ""
     target_entity: str = ""
+    requirement: str | None = None
 
 
 def _entity_rows(session: Session, version_id: int, name: str) -> EntityRow:
@@ -121,6 +122,7 @@ def run_mapping(
     mode: Mode,
     samples_dir: Path,
     top_k: int = DEFAULT_TOP_K,
+    requirement: str | None = None,
     temperature: float = 0.0,
     max_output_tokens: int | None = None,
 ) -> MappingRunResult:
@@ -167,6 +169,7 @@ def run_mapping(
             list(source_fields.values()),
             retrieved,
             samples,
+            requirement=requirement,
             temperature=temperature,
             max_output_tokens=max_output_tokens,
         )
@@ -214,4 +217,5 @@ def run_mapping(
         target_version_id=target_version_id,
         source_entity=source_entity,
         target_entity=target_entity,
+        requirement=requirement,
     )

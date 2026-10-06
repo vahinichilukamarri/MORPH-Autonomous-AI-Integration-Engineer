@@ -37,12 +37,15 @@ def build_request(
     retrieved: Sequence[RetrievedField],
     samples: Sequence[Mapping[str, JsonScalar]],
     *,
+    requirement: str | None = None,
     temperature: float = 0.0,
     max_output_tokens: int | None = None,
 ) -> LLMRequest:
     return LLMRequest(
         system=system_prompt(),
-        parts=(build_user_prompt(mode, target_field, source_fields, retrieved, samples),),
+        parts=(
+            build_user_prompt(mode, target_field, source_fields, retrieved, samples, requirement),
+        ),
         schema_name=SCHEMA_NAME,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
@@ -57,6 +60,7 @@ def propose_field(
     retrieved: Sequence[RetrievedField],
     samples: Sequence[Mapping[str, JsonScalar]],
     *,
+    requirement: str | None = None,
     temperature: float = 0.0,
     max_output_tokens: int | None = None,
 ) -> AgentOutcome:
@@ -66,6 +70,7 @@ def propose_field(
         source_fields,
         retrieved,
         samples,
+        requirement=requirement,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
     )
