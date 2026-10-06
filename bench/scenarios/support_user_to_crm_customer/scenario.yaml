@@ -12,8 +12,9 @@ target:
   system: crm
   entity: Customer
 requirement: >-
-  Users who exist only in the support desk must also appear in the CRM so sales can see them.
-  Reuse the CRM id the user was originally imported with. Use the contact details the support
-  desk holds. Do not guess values that the support desk does not actually know.
+  Sales wants everyone who is known to the support desk to also be visible in the CRM, so
+  account managers can see who is already in contact with the company and follow up with them.
+  The CRM record should reflect the person's contact details, whether their account is active,
+  and when they first appeared.
 fault_profile:
   seed: 0

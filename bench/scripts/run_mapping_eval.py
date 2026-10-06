@@ -386,6 +386,7 @@ def evaluate_unit(
             target_entity=scenario.target.entity,
             mode=mode,
             samples_dir=samples_dir,
+            requirement=scenario.requirement,
             temperature=temperature,
             max_output_tokens=max_output_tokens,
         )

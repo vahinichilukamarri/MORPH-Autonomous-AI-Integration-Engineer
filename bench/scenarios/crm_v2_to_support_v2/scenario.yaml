@@ -14,9 +14,8 @@ target:
   contract: v2
 requirement: >-
   Whenever a customer exists in the CRM, the support desk must have a matching user so the
-  support team can handle their tickets. Keep the original CRM id on the support user for
-  traceability. Customers on the enterprise segment get priority support; everyone else gets
-  standard support.
+  support team can handle their tickets. Customers on the enterprise segment are entitled to
+  priority support; all other customers receive standard support.
 fault_profile:
   seed: 0
   contract_version: v2

@@ -414,3 +414,15 @@ def test_main_writes_a_test_only_report_end_to_end(
     text = output.read_text(encoding="utf-8")
     assert text.startswith("> **TEST-ONLY RUN.**") and "# Mapping evaluation" in text
     assert "wrote" in capsys.readouterr().out
+
+
+def test_each_scenario_requirement_reaches_its_prompts(session: Session, tmp_path: Path) -> None:
+    llm = ScriptedFakeProvider(responder=perfect_reply)
+    evaluate(session, tmp_path, configs=("B",), llm=llm)
+    by_requirement = {b.scenario.requirement.strip() for b in BUNDLES}
+    assert len(by_requirement) == 2, "S1, S2 and S4 share a requirement; S3 has its own"
+    for requirement in by_requirement:
+        assert any(requirement in call.parts[0] for call in llm.calls), requirement
+    assert all("## Integration requirement (trusted" in call.parts[0] for call in llm.calls)
+    texts = [b.scenario.requirement.strip() for b in BUNDLES]
+    assert all(t not in call.system for t in texts for call in llm.calls)
