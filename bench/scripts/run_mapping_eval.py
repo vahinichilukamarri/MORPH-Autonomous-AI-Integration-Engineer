@@ -504,24 +504,6 @@ def main(
         b for b in discover(SCENARIOS_ROOT) if not args.scenarios or b.scenario.id in args.scenarios
     ]
 
-    embedder: EmbeddingProvider
-    if embedder_override is not None:
-        embedder = embedder_override
-    elif args.report_only:
-        from app.embeddings.fake import FakeEmbeddingProvider  # never used when only reporting
-
-        embedder = FakeEmbeddingProvider()
-    elif args.test_only:
-        from app.embeddings.fake import FakeEmbeddingProvider
-
-        embedder = FakeEmbeddingProvider()
-    else:
-        from app.embeddings.fastembed_provider import FastEmbedProvider
-
-        embedder = FastEmbedProvider(
-            settings.embedding_model, cache_dir=settings.embedding_cache_dir
-        )
-
     model_label = (
         (settings.groq_model if provider_kind == "groq" else settings.ollama_model)
         if not args.test_only
@@ -549,6 +531,24 @@ def main(
                 print(f"refused: {exc}", file=sys.stderr)
                 return 2
             llm = ResumableProvider(inner, store_dir, limits=limits)
+
+    embedder: EmbeddingProvider
+    if embedder_override is not None:
+        embedder = embedder_override
+    elif args.report_only:
+        from app.embeddings.fake import FakeEmbeddingProvider  # never used when only reporting
+
+        embedder = FakeEmbeddingProvider()
+    elif args.test_only:
+        from app.embeddings.fake import FakeEmbeddingProvider
+
+        embedder = FakeEmbeddingProvider()
+    else:
+        from app.embeddings.fastembed_provider import FastEmbedProvider
+
+        embedder = FastEmbedProvider(
+            settings.embedding_model, cache_dir=settings.embedding_cache_dir
+        )
 
     status = 0
     if not args.report_only:
