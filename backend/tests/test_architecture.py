@@ -1,4 +1,4 @@
-"""Architecture rules enforced as tests (CLAUDE.md rules 9 and 10)."""
+"""Architecture rules enforced as tests (engineering rules 9 and 10)."""
 
 import re
 from pathlib import Path

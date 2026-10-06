@@ -2,7 +2,7 @@
 
 The first LLM step. For a source entity and a target entity MORPH proposes a mapping for every
 target field, validates each proposal with plain code, scores confidence from deterministic
-signals, flags what needs a human, and stores everything with versions. The rule from CLAUDE.md
+signals, flags what needs a human, and stores everything with versions. The core rule of the project
 holds throughout: **the LLM proposes, software decides.** The model returns a structured
 proposal; deterministic code parses, validates, scores and persists it. The model has no tools,
 no file access and no way to execute anything.
