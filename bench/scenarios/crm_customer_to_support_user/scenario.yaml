@@ -1,0 +1,18 @@
+# Hand-written fixture. Read-only for agents: never edit or generate this file from MORPH.
+id: crm_customer_to_support_user
+description: >-
+  Copy CRM customers into the Support desk as users. The two systems differ in id format,
+  name structure, enum vocabulary, phone format, timestamp type and segment/tier semantics.
+source:
+  system: crm
+  entity: Customer
+target:
+  system: support
+  entity: User
+requirement: >-
+  Whenever a customer exists in the CRM, the support desk must have a matching user so the
+  support team can handle their tickets. Keep the original CRM id on the support user for
+  traceability. Customers on the enterprise segment get priority support; everyone else gets
+  standard support.
+fault_profile:
+  seed: 0

@@ -1,0 +1,144 @@
+{
+  "$defs": {
+    "EntityRef": {
+      "additionalProperties": false,
+      "properties": {
+        "system": {
+          "description": "Which mock system the entity lives in.",
+          "enum": [
+            "crm",
+            "support"
+          ],
+          "title": "System",
+          "type": "string"
+        },
+        "entity": {
+          "description": "Schema name of the entity in that system's OpenAPI spec.",
+          "title": "Entity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "system",
+        "entity"
+      ],
+      "title": "EntityRef",
+      "type": "object"
+    },
+    "FaultProfile": {
+      "additionalProperties": false,
+      "description": "Mirror of the mock systems' ``/__admin/faults`` body (a test keeps the two in sync).",
+      "properties": {
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "http_500_rate": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Http 500 Rate",
+          "type": "number"
+        },
+        "http_429_rate": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Http 429 Rate",
+          "type": "number"
+        },
+        "retry_after_seconds": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Retry After Seconds",
+          "type": "integer"
+        },
+        "malformed_json_rate": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Malformed Json Rate",
+          "type": "number"
+        },
+        "latency_ms": {
+          "default": 0,
+          "maximum": 60000,
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "timeout": {
+          "default": false,
+          "title": "Timeout",
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "default": 30.0,
+          "maximum": 300,
+          "minimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "drop_fields": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Drop Fields",
+          "type": "array"
+        },
+        "contract_version": {
+          "default": "v1",
+          "enum": [
+            "v1",
+            "v2"
+          ],
+          "title": "Contract Version",
+          "type": "string"
+        }
+      },
+      "title": "FaultProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Unique id; equals the folder name.",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/EntityRef"
+    },
+    "target": {
+      "$ref": "#/$defs/EntityRef"
+    },
+    "requirement": {
+      "description": "The integration request in natural language, as a user would.",
+      "minLength": 1,
+      "title": "Requirement",
+      "type": "string"
+    },
+    "fault_profile": {
+      "$ref": "#/$defs/FaultProfile",
+      "description": "Faults applied to the systems for this scenario."
+    }
+  },
+  "required": [
+    "id",
+    "description",
+    "source",
+    "target",
+    "requirement"
+  ],
+  "title": "Scenario",
+  "type": "object"
+}

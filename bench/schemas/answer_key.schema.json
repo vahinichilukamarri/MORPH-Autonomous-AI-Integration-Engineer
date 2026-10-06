@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "ExamplePair": {
+      "additionalProperties": false,
+      "description": "One input -> output example of the expected transformation. Never code.",
+      "properties": {
+        "input": {
+          "additionalProperties": true,
+          "description": "Source field name -> value. Must contain exactly the entry's source_fields.",
+          "title": "Input",
+          "type": "object"
+        },
+        "output": {
+          "description": "The expected value of the target field for that input.",
+          "title": "Output"
+        }
+      },
+      "required": [
+        "input",
+        "output"
+      ],
+      "title": "ExamplePair",
+      "type": "object"
+    },
+    "MappingEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "target_field": {
+          "title": "Target Field",
+          "type": "string"
+        },
+        "mapping_type": {
+          "$ref": "#/$defs/MappingType"
+        },
+        "source_fields": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Fields",
+          "type": "array"
+        },
+        "examples": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ExamplePair"
+          },
+          "title": "Examples",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why this is the correct mapping.",
+          "title": "Notes"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for UNRESOLVED entries only.",
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "target_field",
+        "mapping_type"
+      ],
+      "title": "MappingEntry",
+      "type": "object"
+    },
+    "MappingType": {
+      "enum": [
+        "DIRECT",
+        "COMPOSITE",
+        "TRANSFORMATION",
+        "CONSTANT",
+        "DERIVED",
+        "UNRESOLVED"
+      ],
+      "title": "MappingType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "scenario_id": {
+      "title": "Scenario Id",
+      "type": "string"
+    },
+    "mappings": {
+      "items": {
+        "$ref": "#/$defs/MappingEntry"
+      },
+      "minItems": 1,
+      "title": "Mappings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "scenario_id",
+    "mappings"
+  ],
+  "title": "AnswerKey",
+  "type": "object"
+}
