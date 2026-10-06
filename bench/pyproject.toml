@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "jsonschema>=4.26.0",
+    "morph-backend",
     "pydantic>=2.13.5",
     "pyyaml>=6.0.3",
 ]
@@ -27,8 +28,11 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["morph_bench", "tests"]
+files = ["morph_bench", "scripts", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.uv.sources]
+morph-backend = { path = "../backend", editable = true }
