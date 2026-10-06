@@ -1,0 +1,167 @@
+{
+  "system": "support",
+  "entity": "User",
+  "contract": "v1",
+  "records": [
+    {
+      "userId": 1654,
+      "externalRef": "C-1654",
+      "fullName": "Kiran Gupta",
+      "email_address": "kiran.gupta1654@example.com",
+      "phoneNumber": "919466589567",
+      "accountState": "ENABLED",
+      "tier": "STANDARD",
+      "createdAt": 1680908141
+    },
+    {
+      "userId": 1114,
+      "externalRef": "C-1114",
+      "fullName": "Divya",
+      "email_address": "divya1114@example.com",
+      "phoneNumber": "918699987374",
+      "accountState": "DISABLED",
+      "tier": "PRIORITY",
+      "createdAt": 1711276646
+    },
+    {
+      "userId": 1025,
+      "externalRef": "C-1025",
+      "fullName": "Neha Verma",
+      "email_address": "neha.verma1025@example.com",
+      "phoneNumber": "919320303242",
+      "accountState": "ENABLED",
+      "tier": "STANDARD",
+      "createdAt": 1688153531
+    },
+    {
+      "userId": 1759,
+      "externalRef": "C-1759",
+      "fullName": "Kiran Patel",
+      "email_address": "kiran.patel1759@example.com",
+      "phoneNumber": "917566942273",
+      "accountState": "ENABLED",
+      "tier": "STANDARD",
+      "createdAt": 1717505894
+    },
+    {
+      "userId": 1281,
+      "externalRef": "C-1281",
+      "fullName": "Isha Bose",
+      "email_address": "isha.bose1281@example.com",
+      "phoneNumber": "918616197747",
+      "accountState": "DISABLED",
+      "tier": "STANDARD",
+      "createdAt": 1688960183
+    },
+    {
+      "userId": 1250,
+      "externalRef": "C-1250",
+      "fullName": "Arjun Sharma",
+      "email_address": "arjun.sharma1250@example.com",
+      "phoneNumber": "918748778024",
+      "accountState": "DISABLED",
+      "tier": "STANDARD",
+      "createdAt": 1694293445
+    },
+    {
+      "userId": 1837,
+      "externalRef": "C-1837",
+      "fullName": "Asha Verma",
+      "email_address": "asha.verma@example.com",
+      "phoneNumber": "919876543210",
+      "accountState": "ENABLED",
+      "tier": "STANDARD",
+      "createdAt": 1709633730
+    },
+    {
+      "userId": 1001,
+      "externalRef": "C-1001",
+      "fullName": "Kiran",
+      "email_address": "kiran@example.com",
+      "phoneNumber": null,
+      "accountState": "DISABLED",
+      "tier": "STANDARD",
+      "createdAt": 1672531200
+    },
+    {
+      "userId": 42,
+      "externalRef": "C-0042",
+      "fullName": "Ravi Iyer",
+      "email_address": "ravi.iyer@example.com",
+      "phoneNumber": "14155550123",
+      "accountState": "BLOCKED",
+      "tier": "PRIORITY",
+      "createdAt": 0
+    },
+    {
+      "userId": 2000,
+      "externalRef": "C-2000",
+      "fullName": "Mary Ann Smith",
+      "email_address": "mary.ann@example.com",
+      "phoneNumber": "442071838750",
+      "accountState": "ENABLED",
+      "tier": "STANDARD",
+      "createdAt": 1709251199
+    },
+    {
+      "userId": 777,
+      "externalRef": "C-777",
+      "fullName": "Priya",
+      "email_address": "priya@example.com",
+      "phoneNumber": "6591234567",
+      "accountState": "ENABLED",
+      "tier": "PRIORITY",
+      "createdAt": 1672531199
+    },
+    {
+      "userId": 9999999,
+      "externalRef": "C-9999999",
+      "fullName": "Zoë Müller",
+      "email_address": "zoe@example.com",
+      "phoneNumber": "4915123456789",
+      "accountState": "DISABLED",
+      "tier": "STANDARD",
+      "createdAt": 1749988800
+    },
+    {
+      "userId": 3,
+      "externalRef": "C-3",
+      "fullName": "Li Wei",
+      "email_address": "li.wei@example.com",
+      "phoneNumber": null,
+      "accountState": "BLOCKED",
+      "tier": "STANDARD",
+      "createdAt": 1625387400
+    },
+    {
+      "userId": 5001,
+      "externalRef": null,
+      "fullName": "Mary Ann Smith",
+      "email_address": "mary.smith@example.com",
+      "phoneNumber": "447700900123",
+      "accountState": "ENABLED",
+      "tier": "STANDARD",
+      "createdAt": 1717243200
+    },
+    {
+      "userId": 5002,
+      "externalRef": null,
+      "fullName": "Priya",
+      "email_address": "priya.k@example.com",
+      "phoneNumber": null,
+      "accountState": "BLOCKED",
+      "tier": "PRIORITY",
+      "createdAt": 1700000000
+    },
+    {
+      "userId": 5003,
+      "externalRef": "C-5003",
+      "fullName": "Ana Lucia Gomez",
+      "email_address": "ana.gomez@example.com",
+      "phoneNumber": "5511987654321",
+      "accountState": "DISABLED",
+      "tier": "STANDARD",
+      "createdAt": 1650000000
+    }
+  ]
+}
