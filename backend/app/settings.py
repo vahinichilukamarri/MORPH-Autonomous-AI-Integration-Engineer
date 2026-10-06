@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,6 +12,9 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://morph:morph@localhost:5432/morph"
     cors_origins: list[str] = ["http://localhost:5173"]
+    embedding_provider: Literal["fastembed", "fake"] = "fastembed"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_cache_dir: str | None = None
 
 
 @lru_cache

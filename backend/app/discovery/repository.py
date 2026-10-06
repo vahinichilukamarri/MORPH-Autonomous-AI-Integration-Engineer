@@ -128,38 +128,40 @@ def get_version(session: Session, system_id: int, version: int) -> SystemVersion
     )
 
 
+def field_from_row(f: FieldRow) -> ModelField:
+    return ModelField(
+        name=f.name,
+        path=f.path,
+        json_type=f.json_type,
+        format=f.format,
+        nullable=f.nullable,
+        required=f.required,
+        enum_values=tuple(f.enum_values),
+        description=f.description,
+        examples=tuple(f.examples),
+        constraints=Constraints.model_validate(f.constraints),
+        item_type=f.item_type,
+        entity_ref=f.entity_ref,
+    )
+
+
+def entity_from_row(e: EntityRow) -> Entity:
+    return Entity(
+        name=e.name,
+        schema_name=e.schema_name,
+        description=e.description,
+        role=EntityRole(e.role),
+        wrapped_entity=e.wrapped_entity,
+        fields=tuple(field_from_row(f) for f in e.fields),
+    )
+
+
 def load_model(session: Session, version_id: int) -> SystemModel:
     """Rebuild the SystemModel of a stored version, exactly as it was ingested."""
     version = session.get(SystemVersion, version_id)
     if version is None:
         raise LookupError(f"no system version {version_id}")
-    entities = tuple(
-        Entity(
-            name=e.name,
-            schema_name=e.schema_name,
-            description=e.description,
-            role=EntityRole(e.role),
-            wrapped_entity=e.wrapped_entity,
-            fields=tuple(
-                ModelField(
-                    name=f.name,
-                    path=f.path,
-                    json_type=f.json_type,
-                    format=f.format,
-                    nullable=f.nullable,
-                    required=f.required,
-                    enum_values=tuple(f.enum_values),
-                    description=f.description,
-                    examples=tuple(f.examples),
-                    constraints=Constraints.model_validate(f.constraints),
-                    item_type=f.item_type,
-                    entity_ref=f.entity_ref,
-                )
-                for f in e.fields
-            ),
-        )
-        for e in version.entities
-    )
+    entities = tuple(entity_from_row(e) for e in version.entities)
     operations = tuple(
         Operation.model_validate(
             {
