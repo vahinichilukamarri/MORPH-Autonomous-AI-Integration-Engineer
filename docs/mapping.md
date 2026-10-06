@@ -101,6 +101,26 @@ closing marker) and asserts that the text stays inside its block, that an obedie
 reply still goes through full validation and is rejected, and that nothing in the request
 carries tools or file access.
 
+**Operator requirement.** The business requirement is a separate, trusted section at the start of
+the user message, outside every data block, followed by the line that it does not override the
+output format or the untrusted-data rules. It comes from the operator (the optional `requirement`
+field of `POST /mapping-runs`; the evaluation passes each scenario's requirement text), never from
+a spec or an end user. It exists because some business rules, such as which segment gets priority
+support, appear in no contract. The system text carries only the instruction to treat that
+section as trusted context; the requirement text itself never appears in it.
+
+**Samples shown in prompts** are chosen deterministically and stratified: greedily, earliest
+record first, until every enum value of every shown field and one null per nullable shown field
+is covered, then padded with evenly spaced records to at least five. Validation still runs on
+the full sample set.
+
+**Prompt v1 amendment (before any real run).** The requirement section and the stratified sample
+selection were added to prompt v1 after the first freeze and before any real evaluation existed.
+That is completing the first version, not retuning: no result had been seen, so nothing could be
+tuned against it. The hashes were re-frozen at that point, including a golden hash of the fully
+rendered S1 `tier` prompt and the exact sample choice. Anything changed after the first real
+run is a v2.
+
 **Frozen.** Prompts v1 and confidence formula v1 are frozen before the first real evaluation; a
 test fails if either changes. Any later change must be introduced as prompt v2 or confidence
 formula v2 and reported as a separate, labelled run set in `docs/mapping-eval.md`. Results are
@@ -156,7 +176,7 @@ rejected if it fails; a mapping that fails validation cannot be approved.
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /mapping-runs` | `{source_system_version, target_system_version, source_entity, target_entity, mode}`; runs synchronously and stores the result |
+| `POST /mapping-runs` | `{source_system_version, target_system_version, source_entity, target_entity, mode, requirement?}`; runs synchronously and stores the result (including the requirement text) |
 | `GET /mapping-runs/{id}` | run metadata, summary counts, run-level reasons |
 | `GET /mapping-runs/{id}/mappings` | every mapping with its current version |
 | `GET /mappings/{id}/versions` | all versions of one mapping |

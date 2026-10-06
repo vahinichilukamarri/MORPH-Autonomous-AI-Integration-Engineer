@@ -113,3 +113,14 @@ settled with you; the rest are mine and are the ones to challenge.
 27. **Key format additions** (S1's key does not use them): `expects_review` and `review_note` on an
     entry, `spec_transform` on a scenario, and `contract: v1|v2` on a scenario's entity
     references. The committed JSON Schemas were regenerated.
+
+## Requirement texts
+
+28. **Each scenario carries a business requirement that the mapping prompt shows as a trusted
+    operator section.** They are written as realistic business requirements: purpose and business
+    rules the contracts cannot express (the segment to tier rule), with no hints about mapping
+    tactics and none about the traps (nothing about reusing ids, guessing, or lossy fields). S1,
+    S2 and S4 share one text; S3 has its own. Scenario descriptions, which do discuss the traps,
+    are for humans and are never shown to a model. Only the `scenario.yaml` hashes changed in the
+    manifest; every answer key is untouched.
+

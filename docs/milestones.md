@@ -266,7 +266,8 @@ Add-Content .env 'GROQ_API_KEY=<your key>'
 $b = 'http://localhost:8000'
 $run = Invoke-RestMethod -Method Post "$b/mapping-runs" -ContentType 'application/json' -Body (@{
   source_system_version = 1; target_system_version = 2
-  source_entity = 'Customer'; target_entity = 'User'; mode = 'rag' } | ConvertTo-Json)
+  source_entity = 'Customer'; target_entity = 'User'; mode = 'rag'
+  requirement = 'Customers on the enterprise segment are entitled to priority support.' } | ConvertTo-Json)
 $run.summary
 Invoke-RestMethod "$b/mapping-runs/$($run.id)/mappings" | ForEach-Object { $_ } |
   Select-Object target_field, @{n='type';e={$_.current.mapping_type}},
