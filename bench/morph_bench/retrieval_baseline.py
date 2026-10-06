@@ -81,6 +81,14 @@ class BaselineResult:
     def hits(self, scope: Scope, k: int) -> int:
         return sum(1 for m in self.mappings if m.scopes[scope].hit(k))
 
+    def chance_hits(self, scope: Scope, k: int) -> float:
+        """Expected hits if every ranking were a random permutation of the candidate pool."""
+        pool = self.pool_sizes[scope]
+        if pool == 0:
+            return 0.0
+        miss_one = 1 - min(k, pool) / pool
+        return sum(1 - miss_one ** len(m.source_fields) for m in self.mappings)
+
     def recall(self, scope: Scope, k: int) -> float:
         return self.hits(scope, k) / len(self.mappings) if self.mappings else 0.0
 
@@ -160,8 +168,11 @@ def _mark(value: bool) -> str:
     return "yes" if value else "no"
 
 
-def _fraction(hits: int, total: int) -> str:
-    return f"{hits}/{total} ({100 * hits / total:.1f}%)" if total else "0/0"
+def _fraction(hits: float, total: int) -> str:
+    if not total:
+        return "0/0"
+    shown = f"{hits:.1f}" if isinstance(hits, float) else str(hits)
+    return f"{shown}/{total} ({100 * hits / total:.1f}%)"
 
 
 def _table(result: BaselineResult, scope: Scope) -> list[str]:
@@ -248,7 +259,16 @@ def render(result: BaselineResult) -> str:
         total = len(result.mappings)
         cells = " | ".join(_fraction(result.hits(scope, k), total) for k in KS)
         out.append(f"| {SCOPE_TITLES[scope]} | {cells} |")
-    out.append("")
+    for scope in SCOPES:
+        total = len(result.mappings)
+        cells = " | ".join(_fraction(result.chance_hits(scope, k), total) for k in KS)
+        out.append(f"| {SCOPE_TITLES[scope]}: chance level | {cells} |")
+    out += [
+        "",
+        "Chance level is the expected recall if the candidates were ranked at random, computed",
+        "from the pool sizes above. It shows how much of each score the small pool alone explains.",
+        "",
+    ]
     for scope in SCOPES:
         out += [f"## {SCOPE_TITLES[scope]}", "", *_table(result, scope), ""]
     for scope in SCOPES:

@@ -17,6 +17,9 @@ dev = [
     "types-jsonschema>=4.26.0.20261006",
     "types-pyyaml>=6.0.12.20260906",
 ]
+embeddings = [
+    "fastembed>=0.8.1",
+]
 
 [tool.ruff]
 line-length = 100
@@ -29,6 +32,10 @@ select = ["E", "F", "I", "UP", "B"]
 strict = true
 plugins = ["pydantic.mypy"]
 files = ["morph_bench", "scripts", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["fastembed", "fastembed.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

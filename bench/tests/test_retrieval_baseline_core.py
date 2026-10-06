@@ -115,6 +115,17 @@ def test_recall_is_hits_over_evaluated_mappings() -> None:
     assert result.recall("all", 5) == pytest.approx(3 / 8)
 
 
+def test_chance_level_is_computed_from_the_pool_sizes() -> None:
+    result = run(TABLE)  # pools: 20 fields overall, 8 in User; fullName has two source fields
+    expected_at_1 = 7 * (1 / 20) + (1 - (19 / 20) ** 2)
+    assert result.chance_hits("all", 1) == pytest.approx(expected_at_1)
+    assert result.chance_hits("resource", 8) == pytest.approx(8.0)
+    assert result.chance_hits("all", 5) == pytest.approx(7 * (5 / 20) + (1 - (15 / 20) ** 2))
+    text = render(result)
+    assert "chance level" in text
+    assert f"{expected_at_1:.1f}/8" in text
+
+
 def test_report_contains_both_tables_and_the_computed_numbers() -> None:
     text = render(run(TABLE))
     assert text.startswith("# Retrieval baseline")
