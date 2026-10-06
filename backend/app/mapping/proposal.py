@@ -133,8 +133,8 @@ class LLMProposal(BaseModel):
     alternatives: list[Alternative]
     certainty: Certainty
 
+    def to_proposal(self, expected_target: str) -> "Proposal":
         """Convert to the typed form; any problem raises ValueError (which triggers the re-ask)."""
-        """Convert to the typed form. Raises ValueError (and so triggers the re-ask) on any problem."""
         if self.target_field != expected_target:
             raise ValueError(
                 f"target_field must be {expected_target!r} but the reply says {self.target_field!r}"
