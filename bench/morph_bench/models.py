@@ -47,7 +47,10 @@ class FaultProfile(_Frozen):
 
 class EntityRef(_Frozen):
     system: SystemName = Field(description="Which mock system the entity lives in.")
-    entity: str = Field(description="Schema name of the entity in that system's OpenAPI spec.")
+    entity: str = Field(description="Schema name of the entity in that system OpenAPI spec.")
+    contract: Literal["v1", "v2"] = Field(
+        default="v1", description="Which published contract version of the system is used."
+    )
 
 
 class Scenario(_Frozen):
@@ -60,6 +63,11 @@ class Scenario(_Frozen):
     )
     fault_profile: FaultProfile = Field(
         default_factory=FaultProfile, description="Faults applied to the systems for this scenario."
+    )
+    spec_transform: Literal["none", "strip_docs"] = Field(
+        default="none",
+        description="Deterministic transform applied to both specs before use (strip_docs removes "
+        "every description and example).",
     )
 
     @model_validator(mode="after")
@@ -85,6 +93,14 @@ class MappingEntry(_Frozen):
     examples: tuple[ExamplePair, ...] = ()
     notes: str | None = Field(default=None, description="Why this is the correct mapping.")
     reason: str | None = Field(default=None, description="Required for UNRESOLVED entries only.")
+    expects_review: bool = Field(
+        default=False,
+        description="A correct proposal must also be flagged for review (validation WARN or "
+        "NEEDS_REVIEW), e.g. a nullable source feeding a required target.",
+    )
+    review_note: str | None = Field(
+        default=None, description="Why a review flag is expected; required with expects_review."
+    )
 
     @model_validator(mode="after")
     def _shape_matches_mapping_type(self) -> Self:
@@ -127,6 +143,10 @@ def _shape_problems(entry: MappingEntry) -> list[str]:
         if kind is MappingType.DIRECT and len(sources) == 1:
             if example.output != example.input.get(sources[0]):
                 problems.append("DIRECT example output must equal its input value")
+    if entry.expects_review and not entry.review_note:
+        problems.append("expects_review needs a review_note")
+    if entry.review_note and not entry.expects_review:
+        problems.append("review_note is only for entries with expects_review")
     if kind is MappingType.CONSTANT and len({repr(e.output) for e in entry.examples}) > 1:
         problems.append("CONSTANT examples must all have the same output")
     return problems

@@ -75,8 +75,13 @@ def check_bundle(folder_name: str, scenario: Scenario, key: AnswerKey) -> list[s
     if key.scenario_id != scenario.id:
         problems.append(f"answer key scenario_id '{key.scenario_id}' != '{scenario.id}'")
 
-    source_fields = entity_fields(scenario.source.system, scenario.source.entity)
-    target_fields = entity_fields(scenario.target.system, scenario.target.entity)
+    transform = scenario.spec_transform
+    source_fields = entity_fields(
+        scenario.source.system, scenario.source.entity, scenario.source.contract, transform
+    )
+    target_fields = entity_fields(
+        scenario.target.system, scenario.target.entity, scenario.target.contract, transform
+    )
     if source_fields is None:
         problems.append(f"unknown source entity {scenario.source.system}.{scenario.source.entity}")
     if target_fields is None:
@@ -104,11 +109,16 @@ def _check_entry(
             problems.append(f"{entry.target_field}: source field '{name}' does not exist")
     if entry.target_field not in target_names or entry.mapping_type is MappingType.UNRESOLVED:
         return problems
-    out_check = field_validator(scenario.target.system, scenario.target.entity, entry.target_field)
+    target, source, transform = scenario.target, scenario.source, scenario.spec_transform
+    out_check = field_validator(
+        target.system, target.entity, entry.target_field, target.contract, transform
+    )
     for example in entry.examples:
         for name, value in example.input.items():
             if name in source_names:
-                in_check = field_validator(scenario.source.system, scenario.source.entity, name)
+                in_check = field_validator(
+                    source.system, source.entity, name, source.contract, transform
+                )
                 if not in_check.is_valid(value):
                     problems.append(
                         f"{entry.target_field}: input {name}={value!r} violates the contract"

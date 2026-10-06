@@ -35,7 +35,7 @@ from morph_bench.retrieval_baseline import (
     evaluate,
     render,
 )
-from morph_bench.systems import REPO_ROOT, SPEC_FILES
+from morph_bench.systems import REPO_ROOT, spec_path
 
 DEFAULT_SCENARIO = "crm_customer_to_support_user"
 TEST_ONLY_OUTPUT = Path(".run/retrieval-baseline.test-only.md")
@@ -43,7 +43,7 @@ POOL_LIMIT = 100_000  # larger than any pool: rank every candidate
 
 
 def _ingest_and_embed(session: Session, provider: EmbeddingProvider, system: str) -> IngestResult:
-    spec = load_spec(SPEC_FILES[system])
+    spec = load_spec(spec_path(system, "v1"))
     result = ingest(session, parse_spec(spec, system), spec)
     embed_version(session, result.version_id, provider)
     return result

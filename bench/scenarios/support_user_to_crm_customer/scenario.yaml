@@ -1,0 +1,19 @@
+# Hand-written fixture. Read-only for agents: never edit or generate this file from MORPH.
+id: support_user_to_crm_customer
+description: >-
+  The reverse direction: create CRM customers from Support desk users. Several fields are
+  genuinely hard here: the id must come from externalRef (and cannot be invented for users that
+  were never imported), the joined name has to be split, the phone gets its "+" back, the epoch
+  becomes an ISO string, and the CRM segment cannot be recovered from the support tier.
+source:
+  system: support
+  entity: User
+target:
+  system: crm
+  entity: Customer
+requirement: >-
+  Users who exist only in the support desk must also appear in the CRM so sales can see them.
+  Reuse the CRM id the user was originally imported with. Use the contact details the support
+  desk holds. Do not guess values that the support desk does not actually know.
+fault_profile:
+  seed: 0

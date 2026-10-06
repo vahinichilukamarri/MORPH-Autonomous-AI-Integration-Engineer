@@ -13,8 +13,18 @@
           "type": "string"
         },
         "entity": {
-          "description": "Schema name of the entity in that system's OpenAPI spec.",
+          "description": "Schema name of the entity in that system OpenAPI spec.",
           "title": "Entity",
+          "type": "string"
+        },
+        "contract": {
+          "default": "v1",
+          "description": "Which published contract version of the system is used.",
+          "enum": [
+            "v1",
+            "v2"
+          ],
+          "title": "Contract",
           "type": "string"
         }
       },
@@ -130,6 +140,16 @@
     "fault_profile": {
       "$ref": "#/$defs/FaultProfile",
       "description": "Faults applied to the systems for this scenario."
+    },
+    "spec_transform": {
+      "default": "none",
+      "description": "Deterministic transform applied to both specs before use (strip_docs removes every description and example).",
+      "enum": [
+        "none",
+        "strip_docs"
+      ],
+      "title": "Spec Transform",
+      "type": "string"
     }
   },
   "required": [

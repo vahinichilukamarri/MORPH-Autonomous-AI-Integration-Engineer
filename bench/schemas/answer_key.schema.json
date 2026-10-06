@@ -73,6 +73,25 @@
           "default": null,
           "description": "Required for UNRESOLVED entries only.",
           "title": "Reason"
+        },
+        "expects_review": {
+          "default": false,
+          "description": "A correct proposal must also be flagged for review (validation WARN or NEEDS_REVIEW), e.g. a nullable source feeding a required target.",
+          "title": "Expects Review",
+          "type": "boolean"
+        },
+        "review_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why a review flag is expected; required with expects_review.",
+          "title": "Review Note"
         }
       },
       "required": [

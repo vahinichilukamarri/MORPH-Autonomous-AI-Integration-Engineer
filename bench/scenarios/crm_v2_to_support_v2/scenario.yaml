@@ -1,0 +1,22 @@
+# Hand-written fixture. Read-only for agents: never edit or generate this file from MORPH.
+id: crm_v2_to_support_v2
+description: >-
+  The first integration again, against the drifted v2 contracts: the CRM renamed phone to
+  phone_number and Support renamed tier to serviceTier. Everything else is unchanged, so a
+  mapping tied to the old names must be re-derived.
+source:
+  system: crm
+  entity: Customer
+  contract: v2
+target:
+  system: support
+  entity: User
+  contract: v2
+requirement: >-
+  Whenever a customer exists in the CRM, the support desk must have a matching user so the
+  support team can handle their tickets. Keep the original CRM id on the support user for
+  traceability. Customers on the enterprise segment get priority support; everyone else gets
+  standard support.
+fault_profile:
+  seed: 0
+  contract_version: v2

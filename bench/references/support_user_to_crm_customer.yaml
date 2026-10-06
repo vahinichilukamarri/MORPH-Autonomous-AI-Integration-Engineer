@@ -1,0 +1,32 @@
+# Hand-written reference pipelines in the backend DSL, one per non-UNRESOLVED answer-key entry.
+# They prove every key entry is expressible and consistent. They are never imported by the
+# backend and never shown to any prompt. `segment` is UNRESOLVED in the key, so it has none.
+scenario_id: support_user_to_crm_customer
+pipelines:
+  customer_id:
+    steps:
+      - { op: COPY, field: externalRef }
+  first_name:
+    steps:
+      - { op: COPY, field: fullName }
+      - { op: SPLIT_PART, separator: " ", index: 0 }
+  last_name:
+    steps:
+      - { op: COPY, field: fullName }
+      - { op: REGEX_EXTRACT, pattern: "^\\S+ (.+)$", group: 1 }
+  email:
+    steps:
+      - { op: COPY, field: email_address }
+  phone:
+    steps:
+      - { op: COPY, field: phoneNumber }
+      - { op: ADD_PREFIX, prefix: "+" }
+  status:
+    steps:
+      - { op: COPY, field: accountState }
+      - op: MAP_ENUM
+        mapping: { ENABLED: ACTIVE, DISABLED: INACTIVE, BLOCKED: SUSPENDED }
+  created_at:
+    steps:
+      - { op: COPY, field: createdAt }
+      - { op: FORMAT_DATETIME, from_format: epoch_s, to_format: iso8601 }

@@ -1,0 +1,98 @@
+# Hand-written fixture. Read-only for agents: never edit or generate this file from MORPH.
+# Same expected mappings as crm_customer_to_support_user against the v2 contracts: the CRM field
+# phone is now phone_number and the Support field tier is now serviceTier.
+# One entry per Support `User` field. Examples are input -> output pairs, never code.
+scenario_id: crm_v2_to_support_v2
+mappings:
+  - target_field: userId
+    mapping_type: TRANSFORMATION
+    source_fields: [customer_id]
+    notes: Numeric part of the CRM id as an integer; leading zeros are not significant.
+    examples:
+      - input: { customer_id: "C-1837" }
+        output: 1837
+      - input: { customer_id: "C-1001" }
+        output: 1001
+      - input: { customer_id: "C-0042" }
+        output: 42
+
+  - target_field: externalRef
+    mapping_type: DIRECT
+    source_fields: [customer_id]
+    notes: The original CRM id is kept unchanged for traceability.
+    examples:
+      - input: { customer_id: "C-1837" }
+        output: "C-1837"
+      - input: { customer_id: "C-1001" }
+        output: "C-1001"
+
+  - target_field: fullName
+    mapping_type: COMPOSITE
+    source_fields: [first_name, last_name]
+    notes: >-
+      "first last", trimmed, one space between words; only the first name when last_name is null.
+    examples:
+      - input: { first_name: "Asha", last_name: "Verma" }
+        output: "Asha Verma"
+      - input: { first_name: "Kiran", last_name: null }
+        output: "Kiran"
+      - input: { first_name: " Ravi ", last_name: "Iyer " }
+        output: "Ravi Iyer"
+
+  - target_field: email_address
+    mapping_type: DIRECT
+    source_fields: [email]
+    notes: Same value, different field name.
+    examples:
+      - input: { email: "asha.verma@example.com" }
+        output: "asha.verma@example.com"
+
+  - target_field: phoneNumber
+    mapping_type: TRANSFORMATION
+    source_fields: [phone_number]
+    notes: E.164 with leading "+" becomes digits only; null stays null.
+    examples:
+      - input: { phone_number: "+919876543210" }
+        output: "919876543210"
+      - input: { phone_number: "+14155550123" }
+        output: "14155550123"
+      - input: { phone_number: null }
+        output: null
+
+  - target_field: accountState
+    mapping_type: TRANSFORMATION
+    source_fields: [status]
+    notes: Vocabulary translation ACTIVE->ENABLED, INACTIVE->DISABLED, SUSPENDED->BLOCKED.
+    examples:
+      - input: { status: "ACTIVE" }
+        output: "ENABLED"
+      - input: { status: "INACTIVE" }
+        output: "DISABLED"
+      - input: { status: "SUSPENDED" }
+        output: "BLOCKED"
+
+  - target_field: serviceTier
+    mapping_type: DERIVED
+    source_fields: [segment]
+    notes: >-
+      Different concept, not a rename: ENTERPRISE customers get PRIORITY support, SMB and
+      MIDMARKET get STANDARD.
+    examples:
+      - input: { segment: "SMB" }
+        output: "STANDARD"
+      - input: { segment: "MIDMARKET" }
+        output: "STANDARD"
+      - input: { segment: "ENTERPRISE" }
+        output: "PRIORITY"
+
+  - target_field: createdAt
+    mapping_type: TRANSFORMATION
+    source_fields: [created_at]
+    notes: ISO-8601 UTC datetime string becomes integer unix epoch seconds.
+    examples:
+      - input: { created_at: "2024-03-05T10:15:30Z" }
+        output: 1709633730
+      - input: { created_at: "2023-01-01T00:00:00Z" }
+        output: 1672531200
+      - input: { created_at: "1970-01-01T00:00:00Z" }
+        output: 0

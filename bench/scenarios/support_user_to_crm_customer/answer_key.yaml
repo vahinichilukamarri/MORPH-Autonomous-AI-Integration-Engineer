@@ -1,0 +1,100 @@
+# Hand-written fixture. Read-only for agents: never edit or generate this file from MORPH.
+# Every judgement call is explained in docs/answer-key-notes.md.
+scenario_id: support_user_to_crm_customer
+mappings:
+  - target_field: customer_id
+    mapping_type: DIRECT
+    source_fields: [externalRef]
+    expects_review: true
+    review_note: >-
+      externalRef is null for users that were not imported from the CRM. Those users are not
+      syncable and must be flagged for review. The id must never be fabricated as C-<userId>.
+    notes: >-
+      The CRM id is stored unchanged in externalRef. Only imported users have one, so a null
+      externalRef is a nullable source feeding a required target: correct handling is a
+      validation warning and review, not a made-up id.
+    examples:
+      - input: { externalRef: "C-1837" }
+        output: "C-1837"
+      - input: { externalRef: "C-1001" }
+        output: "C-1001"
+
+  - target_field: first_name
+    mapping_type: TRANSFORMATION
+    source_fields: [fullName]
+    notes: >-
+      Convention: first_name is the text before the first space. Wrong only for multi-word
+      first names (Mary Ann Smith gives Mary), which fullName cannot distinguish.
+    examples:
+      - input: { fullName: "Asha Verma" }
+        output: "Asha"
+      - input: { fullName: "Kiran" }
+        output: "Kiran"
+      - input: { fullName: "Mary Ann Smith" }
+        output: "Mary"
+
+  - target_field: last_name
+    mapping_type: TRANSFORMATION
+    source_fields: [fullName]
+    notes: >-
+      Convention: last_name is everything after the first space, or null when fullName has no
+      space (Support stores only the first name when the CRM last_name is null).
+    examples:
+      - input: { fullName: "Asha Verma" }
+        output: "Verma"
+      - input: { fullName: "Kiran" }
+        output: null
+      - input: { fullName: "Mary Ann Smith" }
+        output: "Ann Smith"
+
+  - target_field: email
+    mapping_type: DIRECT
+    source_fields: [email_address]
+    notes: Same value, different field name.
+    examples:
+      - input: { email_address: "asha.verma@example.com" }
+        output: "asha.verma@example.com"
+
+  - target_field: phone
+    mapping_type: TRANSFORMATION
+    source_fields: [phoneNumber]
+    notes: Digits only becomes E.164 by adding the leading "+"; null stays null.
+    examples:
+      - input: { phoneNumber: "919876543210" }
+        output: "+919876543210"
+      - input: { phoneNumber: "14155550123" }
+        output: "+14155550123"
+      - input: { phoneNumber: null }
+        output: null
+
+  - target_field: status
+    mapping_type: TRANSFORMATION
+    source_fields: [accountState]
+    notes: Vocabulary translation ENABLED->ACTIVE, DISABLED->INACTIVE, BLOCKED->SUSPENDED.
+    examples:
+      - input: { accountState: "ENABLED" }
+        output: "ACTIVE"
+      - input: { accountState: "DISABLED" }
+        output: "INACTIVE"
+      - input: { accountState: "BLOCKED" }
+        output: "SUSPENDED"
+
+  - target_field: segment
+    mapping_type: UNRESOLVED
+    reason: >-
+      The support tier does not determine the CRM segment: STANDARD covers both SMB and
+      MIDMARKET, and PRIORITY is only evidence of ENTERPRISE, not a record of it. The support
+      desk holds no other segment information, so the value cannot be produced without guessing.
+      It must come from a human or another source.
+
+  - target_field: created_at
+    mapping_type: TRANSFORMATION
+    source_fields: [createdAt]
+    notes: Integer unix epoch seconds become an ISO-8601 UTC datetime string ending in Z.
+    examples:
+      - input: { createdAt: 1709633730 }
+        output: "2024-03-05T10:15:30Z"
+      - input: { createdAt: 1672531200 }
+        output: "2023-01-01T00:00:00Z"
+      - input: { createdAt: 0 }
+        output: "1970-01-01T00:00:00Z"

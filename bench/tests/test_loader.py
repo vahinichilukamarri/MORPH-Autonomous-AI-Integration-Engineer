@@ -46,8 +46,14 @@ def mapping(data: Data, field: str) -> Data:
 
 def test_shipped_scenarios_load() -> None:
     bundles = discover()
-    assert [b.scenario.id for b in bundles] == [SCENARIO_ID]
-    assert len(bundles[0].answer_key_sha256) == 64
+    assert [b.scenario.id for b in bundles] == [
+        "crm_customer_to_support_user",
+        "crm_customer_to_support_user_nodocs",
+        "crm_v2_to_support_v2",
+        "support_user_to_crm_customer",
+    ]
+    assert all(len(b.answer_key_sha256) == 64 for b in bundles)
+    assert sum(len(b.answer_key.mappings) for b in bundles) == 32
 
 
 def test_fingerprint_changes_with_the_answer_key(folder: Path) -> None:
