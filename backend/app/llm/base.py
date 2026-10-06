@@ -155,7 +155,7 @@ class BaseLLMProvider(ABC):
         request: LLMRequest,
         response_model: type[T],
         *,
-        validate: Callable[[T], None] | None = None,
+        validate: Callable[[T], object] | None = None,
     ) -> StructuredResult[T]:
         """Parse the reply into ``response_model``; on invalid output re-ask exactly once.
 
