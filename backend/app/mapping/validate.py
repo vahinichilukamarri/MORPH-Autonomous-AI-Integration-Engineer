@@ -265,12 +265,12 @@ def _ambiguity(proposal: Proposal, retrieval: RetrievalSignal | None) -> list[Re
         retrieval is not None
         and retrieval.top_gap is not None
         and retrieval.top_gap < AMBIGUITY_EPSILON
-        and chosen & set(retrieval.top_two)
+        and len(chosen & set(retrieval.top_two)) == 1
     ):
         reasons.append(
             Reason(
                 Code.AMBIGUOUS_RETRIEVAL,
-                f"the two nearest source fields {list(retrieval.top_two)} are within "
+                f"one of the two nearest source fields {list(retrieval.top_two)} are within "
                 f"{AMBIGUITY_EPSILON} of each other",
             )
         )

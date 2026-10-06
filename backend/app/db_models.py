@@ -11,6 +11,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -156,3 +157,92 @@ class EntityEmbedding(Base):
     model_name: Mapped[str] = mapped_column(String(200))
     text: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
+
+
+class MappingRun(Base):
+    __tablename__ = "mapping_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_version_id: Mapped[int] = mapped_column(ForeignKey("system_versions.id"), index=True)
+    target_version_id: Mapped[int] = mapped_column(ForeignKey("system_versions.id"), index=True)
+    source_entity: Mapped[str] = mapped_column(Text)
+    target_entity: Mapped[str] = mapped_column(Text)
+    mode: Mapped[str] = mapped_column(String(16))
+    provider: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(Text)
+    prompt_version: Mapped[str] = mapped_column(String(16))
+    confidence_version: Mapped[str] = mapped_column(String(32))
+    temperature: Mapped[float] = mapped_column(Float)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    run_reasons: Mapped[list[Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    mappings: Mapped[list["Mapping"]] = relationship(
+        back_populates="run", order_by="Mapping.position"
+    )
+
+
+class Mapping(Base):
+    __tablename__ = "mappings"
+    __table_args__ = (UniqueConstraint("mapping_run_id", "target_field"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapping_run_id: Mapped[int] = mapped_column(ForeignKey("mapping_runs.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    target_field: Mapped[str] = mapped_column(Text)
+
+    run: Mapped[MappingRun] = relationship(back_populates="mappings")
+    versions: Mapped[list["MappingVersion"]] = relationship(
+        back_populates="mapping", order_by="MappingVersion.version"
+    )
+
+
+class MappingVersion(Base):
+    """Version 1 is the proposal made by the system; approvals and overrides append versions."""
+
+    __tablename__ = "mapping_versions"
+    __table_args__ = (UniqueConstraint("mapping_id", "version"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapping_id: Mapped[int] = mapped_column(ForeignKey("mappings.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    author: Mapped[str] = mapped_column(String(16))
+    mapping_type: Mapped[str] = mapped_column(String(16))
+    source_fields: Mapped[list[Any]] = mapped_column(JSONB)
+    transformation: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    unresolved_reason: Mapped[str | None] = mapped_column(Text)
+    rationale: Mapped[str] = mapped_column(Text)
+    alternatives: Mapped[list[Any]] = mapped_column(JSONB)
+    certainty: Mapped[str] = mapped_column(String(8))
+    validation_status: Mapped[str] = mapped_column(String(8))
+    validation_reasons: Mapped[list[Any]] = mapped_column(JSONB)
+    outputs_preview: Mapped[list[Any]] = mapped_column(JSONB)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    review_status: Mapped[str] = mapped_column(String(16))
+    review_reasons: Mapped[list[Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    mapping: Mapped[Mapping] = relationship(back_populates="versions")
+
+
+class LLMCall(Base):
+    """Metadata of one provider call. No prompt text and no secrets."""
+
+    __tablename__ = "llm_calls"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapping_run_id: Mapped[int | None] = mapped_column(ForeignKey("mapping_runs.id"), index=True)
+    target_field: Mapped[str | None] = mapped_column(Text)
+    attempt: Mapped[int] = mapped_column(Integer)
+    provider: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(Text)
+    prompt_hash: Mapped[str] = mapped_column(String(64))
+    input_tokens: Mapped[int | None] = mapped_column(Integer)
+    output_tokens: Mapped[int | None] = mapped_column(Integer)
+    reasoning_tokens: Mapped[int | None] = mapped_column(Integer)
+    latency_ms: Mapped[int] = mapped_column(Integer)
+    outcome: Mapped[str] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(String(16))
+    http_attempts: Mapped[int] = mapped_column(Integer)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

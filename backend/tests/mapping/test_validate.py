@@ -266,6 +266,11 @@ def test_close_retrieval_candidates_make_a_mapping_ambiguous() -> None:
     assert check(proposal(*USER_ID), "userId", retrieval=close).ambiguous
     clear = RetrievalSignal(ranks={"customer_id": 1}, top_gap=0.2, top_two=("customer_id", "email"))
     assert not check(proposal(*USER_ID), "userId", retrieval=clear).ambiguous
+    both_used = RetrievalSignal(
+        ranks={"first_name": 1, "last_name": 2}, top_gap=0.001, top_two=("first_name", "last_name")
+    )
+    composite = proposal(*FULL_NAME)
+    assert not check(composite, "fullName", retrieval=both_used).ambiguous, "no competitor left out"
     elsewhere = RetrievalSignal(ranks={"customer_id": 4}, top_gap=0.001, top_two=("email", "phone"))
     assert not check(proposal(*USER_ID), "userId", retrieval=elsewhere).ambiguous
 

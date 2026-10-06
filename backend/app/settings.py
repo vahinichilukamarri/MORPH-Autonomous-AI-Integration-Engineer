@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     groq_reasoning_effort: Literal["low", "medium", "high"] = "low"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
+    samples_dir: Path = ENV_FILE.parent / "mock_systems" / "samples"
     # Spec files given to POST /systems/ingest must live under this directory.
     spec_root: Path = ENV_FILE.parent
 
