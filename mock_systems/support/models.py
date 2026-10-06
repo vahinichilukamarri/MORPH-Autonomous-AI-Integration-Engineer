@@ -1,9 +1,26 @@
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictInt, StrictStr, field_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    StrictStr,
+)
+
+from common.types import EmailAddress
 
 PHONE_DIGITS_PATTERN = r"^[1-9]\d{7,14}$"
+# Words separated by exactly one space, no leading or trailing space.
+FULL_NAME_PATTERN = r"^[^ ]+( [^ ]+)*$"
+
+
+def _integral_float_to_int(value: object) -> object:
+    """JSON Schema treats 182.0 as an integer; any other coercion (e.g. strings) stays rejected."""
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
 
 
 class AccountState(StrEnum):
@@ -21,13 +38,15 @@ class User(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     userId: Annotated[
-        StrictInt,
+        int,
         Field(
+            strict=True,
             ge=1,
             description="Numeric user identifier. For users imported from the CRM this is the "
             "numeric part of the CRM customer id (C-1837 -> 1837).",
             examples=[1837],
         ),
+        BeforeValidator(_integral_float_to_int),
     ]
     externalRef: Annotated[
         StrictStr | None,
@@ -42,13 +61,14 @@ class User(BaseModel):
         Field(
             min_length=1,
             max_length=200,
+            pattern=FULL_NAME_PATTERN,
             description="Display name: first and last name joined by a single space, trimmed. "
             "Only the first name when the person has no last name.",
             examples=["Asha Verma"],
         ),
     ]
     email_address: Annotated[
-        EmailStr,
+        EmailAddress,
         Field(description="Contact email address.", examples=["asha.verma@example.com"]),
     ]
     phoneNumber: Annotated[
@@ -69,20 +89,15 @@ class User(BaseModel):
         Field(description="Support service tier.", examples=["STANDARD"]),
     ]
     createdAt: Annotated[
-        StrictInt,
+        int,
         Field(
+            strict=True,
             ge=0,
             description="Creation time as an integer count of seconds since the Unix epoch (UTC).",
             examples=[1709633730],
         ),
+        BeforeValidator(_integral_float_to_int),
     ]
-
-    @field_validator("fullName")
-    @classmethod
-    def _full_name_is_normalised(cls, value: str) -> str:
-        if " ".join(value.split()) != value:
-            raise ValueError("fullName must be trimmed with single spaces between words")
-        return value
 
 
 class ErrorDetail(BaseModel):

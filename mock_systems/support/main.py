@@ -1,5 +1,6 @@
 import os
 import secrets
+from collections.abc import Mapping
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Request, Response, Security
@@ -17,16 +18,21 @@ V2_RENAMES = {"tier": "serviceTier"}
 _bearer = HTTPBearer(auto_error=False, description="Support API bearer token.")
 
 _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse, "description": "Request body is not parseable JSON."},
     401: {"model": ErrorResponse, "description": "Missing or invalid bearer token."},
     422: {"model": ErrorResponse, "description": "Request failed strict validation."},
 }
 
 
 def _error(
-    status: int, code: str, message: str, details: list[ErrorDetail] | None = None
+    status: int,
+    code: str,
+    message: str,
+    details: list[ErrorDetail] | None = None,
+    headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
     body = ErrorResponse(error=ErrorBody(code=code, message=message, details=details or []))
-    return JSONResponse(status_code=status, content=body.model_dump(mode="json"))
+    return JSONResponse(status_code=status, content=body.model_dump(mode="json"), headers=headers)
 
 
 def _expected(error: Any) -> str:
@@ -82,7 +88,8 @@ def create_app(token: str | None = None, admin_token: str | None = None) -> Fast
     @app.exception_handler(StarletteHTTPException)
     async def on_http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:
         codes = {401: "UNAUTHORIZED", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED"}
-        return _error(exc.status_code, codes.get(exc.status_code, "ERROR"), str(exc.detail))
+        code = codes.get(exc.status_code, "ERROR")
+        return _error(exc.status_code, code, str(exc.detail), headers=exc.headers)
 
     @app.get(
         "/users/{userId}",

@@ -111,7 +111,7 @@ def test_full_name_must_be_normalised(support: TestClient) -> None:
     for bad in (" Asha Verma", "Asha  Verma", "Asha Verma "):
         response = support.post("/users", json={**USER, "fullName": bad})
         assert response.status_code == 422, bad
-        assert "single spaces" in detail_for(response.json(), "fullName")["expected"]
+        assert "pattern" in detail_for(response.json(), "fullName")["expected"]
 
 
 def test_unknown_fields_are_rejected(support: TestClient) -> None:

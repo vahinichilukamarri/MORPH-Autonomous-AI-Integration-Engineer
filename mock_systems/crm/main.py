@@ -27,6 +27,10 @@ def create_app(api_key: str | None = None, admin_token: str | None = None) -> Fa
         version="1.0.0",
         description="Mock enterprise CRM. snake_case fields, string customer ids, E.164 phones.",
         dependencies=[Depends(require_api_key)],
+        responses={
+            400: {"description": "Request body is not parseable JSON."},
+            401: {"description": "Missing or invalid X-API-Key header."},
+        },
     )
     app.state.store = store
 

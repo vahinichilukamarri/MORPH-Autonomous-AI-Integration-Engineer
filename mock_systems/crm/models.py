@@ -1,16 +1,17 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import (
     AwareDatetime,
     BaseModel,
     ConfigDict,
-    EmailStr,
     Field,
     field_serializer,
     model_validator,
 )
+
+from common.types import EmailAddress
 
 CUSTOMER_ID_PATTERN = r"^C-\d+$"
 E164_PATTERN = r"^\+[1-9]\d{7,14}$"
@@ -46,7 +47,7 @@ LastName = Annotated[
     ),
 ]
 Email = Annotated[
-    EmailStr,
+    EmailAddress,
     Field(
         description="Primary contact email address. Required.",
         examples=["asha.verma@example.com"],
@@ -104,10 +105,22 @@ class CustomerCreate(BaseModel):
     segment: Segment
 
 
+_NOT_NULLABLE_ON_PATCH = ("first_name", "email", "status", "segment")
+
+
+def _forbid_null_in_schema(schema: dict[str, Any]) -> None:
+    """Optional on PATCH, but explicit null is rejected: say so in the OpenAPI schema."""
+    for name in _NOT_NULLABLE_ON_PATCH:
+        prop = schema["properties"][name]
+        options = [o for o in prop.pop("anyOf", []) if o != {"type": "null"}]
+        if len(options) == 1:
+            prop.update(options[0])
+
+
 class CustomerPatch(BaseModel):
     """Partial update. Only the fields present in the request body are changed."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", json_schema_extra=_forbid_null_in_schema)
 
     first_name: FirstName | None = None
     last_name: LastName = None
@@ -118,7 +131,7 @@ class CustomerPatch(BaseModel):
 
     @model_validator(mode="after")
     def _reject_null_for_required_fields(self) -> "CustomerPatch":
-        for name in ("first_name", "email", "status", "segment"):
+        for name in _NOT_NULLABLE_ON_PATCH:
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError(f"{name} cannot be set to null")
         return self
