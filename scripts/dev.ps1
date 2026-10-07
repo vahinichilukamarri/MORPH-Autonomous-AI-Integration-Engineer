@@ -76,7 +76,10 @@ function Start-Background {
 function Stop-Background {
     foreach ($pidFile in Get-ChildItem -Path $RunDir -Filter '*.pid' -ErrorAction SilentlyContinue) {
         $procId = [int](Get-Content $pidFile.FullName)
-        & taskkill /PID $procId /T /F 2>&1 | Out-Null
+        # A stale pid file (the process already exited) is not an error.
+        if (Get-Process -Id $procId -ErrorAction SilentlyContinue) {
+            & taskkill /PID $procId /T /F 2>&1 | Out-Null
+        }
         Remove-Item $pidFile.FullName
     }
 }
