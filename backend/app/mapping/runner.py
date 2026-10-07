@@ -38,6 +38,7 @@ from app.mapping.validate import (
     validate_proposal,
     validate_run,
 )
+from app.mapping.validate_v2 import review_decision_v2, validate_proposal_v2
 
 _COMPOUND = ("object", "array")
 DEFAULT_TOP_K = 5
@@ -123,6 +124,7 @@ def run_mapping(
     samples_dir: Path,
     top_k: int = DEFAULT_TOP_K,
     requirement: str | None = None,
+    validator: str = "v1",
     temperature: float = 0.0,
     max_output_tokens: int | None = None,
 ) -> MappingRunResult:
@@ -173,7 +175,8 @@ def run_mapping(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
         )
-        validation = validate_proposal(
+        validate = validate_proposal_v2 if validator == "v2" else validate_proposal
+        validation = validate(
             outcome.proposal,
             source_fields=source_fields,
             target_field=target_field,
@@ -188,7 +191,8 @@ def run_mapping(
                 validation, ranks, outcome.proposal.source_fields, outcome.proposal.certainty
             )
         )
-        status, reasons = review_decision(outcome.proposal.mapping_type, validation, score)
+        decide = review_decision_v2 if validator == "v2" else review_decision
+        status, reasons = decide(outcome.proposal.mapping_type, validation, score)
         items.append(
             MappingItem(
                 target_field=target_field.path,
