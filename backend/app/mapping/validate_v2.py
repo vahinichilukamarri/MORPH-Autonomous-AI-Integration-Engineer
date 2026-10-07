@@ -15,8 +15,10 @@ the sample records:
 * ``LOSSY_TRUNCATION`` (informational): a ``SPLIT_PART`` throws away parts of the input for some
   record, so different inputs can end in the same output.
 
-The two lossy checks are recorded but do not force review (``LOSSY_FORCES_REVIEW`` is empty); see
-docs/mapping-eval.md for the measured trade-off behind that choice.
+Validator v2 as first shipped records the two lossy checks without forcing review
+(``REVIEW_FORCING_CODES_V2``). Policy v2.1 (also post-hoc, chosen after the v1 failures and the v2
+rescoring were seen) forces review for ``LOSSY_TRUNCATION`` only: ``LOSSY_FORCES_REVIEW``.
+``LOSSY_COLLAPSE`` stays a visible warning. See docs/mapping-eval.md for the measured trade-off.
 """
 
 from collections.abc import Mapping, Sequence
@@ -47,7 +49,9 @@ SHOWN_EXAMPLES = 2
 
 REVIEW_FORCING_CODES_V2 = REVIEW_FORCING_CODES | {Code.MOSTLY_NULL_OUTPUT, Code.CONSTANT_OUTPUT}
 LOSSY_CODES = frozenset({Code.LOSSY_COLLAPSE, Code.LOSSY_TRUNCATION})
-LOSSY_FORCES_REVIEW: frozenset[Code] = frozenset()
+# v2.1 policy: truncation forces review, many-to-one collapse does not.
+LOSSY_FORCES_REVIEW: frozenset[Code] = frozenset({Code.LOSSY_TRUNCATION})
+REVIEW_FORCING_CODES_V2_1 = REVIEW_FORCING_CODES_V2 | LOSSY_FORCES_REVIEW
 
 
 def _source_values(
@@ -224,3 +228,10 @@ def review_decision_v2(
         reasons.append(f"low_confidence<{limit}")
     status = ReviewStatus.NEEDS_REVIEW if reasons else ReviewStatus.AUTO_ACCEPTED
     return status, tuple(reasons)
+
+
+def review_decision_v2_1(
+    mapping_type: MappingType, validation: ValidationResult, score: float | None
+) -> tuple[ReviewStatus, tuple[str, ...]]:
+    """The v2.1 policy: the v2 rules plus review for ``LOSSY_TRUNCATION``."""
+    return review_decision_v2(mapping_type, validation, score, forcing=REVIEW_FORCING_CODES_V2_1)

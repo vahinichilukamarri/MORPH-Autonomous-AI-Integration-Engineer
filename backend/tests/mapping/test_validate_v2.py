@@ -14,7 +14,9 @@ from app.mapping.validate_v2 import (
     LOSSY_CODES,
     LOSSY_FORCES_REVIEW,
     REVIEW_FORCING_CODES_V2,
+    REVIEW_FORCING_CODES_V2_1,
     review_decision_v2,
+    review_decision_v2_1,
     validate_proposal_v2,
 )
 from tests.mapping.helpers import STATE, TIER, entity_fields, proposal, samples
@@ -115,15 +117,98 @@ def test_mary_ann_smith_to_ann_is_detected_as_lossy_truncation() -> None:
     assert Code.MOSTLY_NULL_OUTPUT not in codes(result), "it is wrong, not null"
 
 
-def test_the_lossy_checks_do_not_force_review_until_a_policy_says_so() -> None:
+def test_validator_v2_as_first_shipped_does_not_force_review_for_lossy_checks() -> None:
     result = v2(SECOND_TOKEN, "last_name")
-    assert LOSSY_FORCES_REVIEW == frozenset() and not (LOSSY_CODES & REVIEW_FORCING_CODES_V2)
+    assert not (LOSSY_CODES & REVIEW_FORCING_CODES_V2), "v2 itself is unchanged"
     status, _ = review_decision_v2(MappingType.TRANSFORMATION, result, 1.0)
     assert status is ReviewStatus.AUTO_ACCEPTED
-    forced, reasons = review_decision_v2(
-        MappingType.TRANSFORMATION, result, 1.0, forcing=REVIEW_FORCING_CODES_V2 | LOSSY_CODES
+
+
+# ---- policy v2.1 (post-hoc): truncation forces review, collapse does not -----------------------
+
+
+def test_v21_truncation_forces_needs_review_even_at_full_confidence() -> None:
+    result = v2(SECOND_TOKEN, "last_name", records=only("Mary Ann Smith"))
+    assert Code.LOSSY_TRUNCATION in codes(result)
+    status, reasons = review_decision_v2_1(MappingType.TRANSFORMATION, result, 1.0)
+    assert status is ReviewStatus.NEEDS_REVIEW
+    assert reasons == ("warning:LOSSY_TRUNCATION",)
+
+
+def test_v21_collapse_alone_does_not_force_review() -> None:
+    target = Field(name="t", path="t", json_type="string", required=True)
+    collapse = proposal(
+        "t",
+        MappingType.TRANSFORMATION,
+        ("segment",),
+        {"op": "COPY", "field": "segment"},
+        {"op": "REGEX_REPLACE", "pattern": r"^(SMB|MIDMARKET)$", "replacement": "SMALL"},
     )
-    assert forced is ReviewStatus.NEEDS_REVIEW and "warning:LOSSY_TRUNCATION" in reasons
+    result = validate_proposal_v2(
+        collapse, source_fields=CRM, target_field=target, samples=CUSTOMERS
+    )
+    assert codes(result) == {Code.LOSSY_COLLAPSE}, "a visible warning"
+    status, reasons = review_decision_v2_1(MappingType.TRANSFORMATION, result, 1.0)
+    assert status is ReviewStatus.AUTO_ACCEPTED and reasons == ()
+
+
+def test_v21_keeps_the_correct_many_to_one_tier_map_auto_accepted() -> None:
+    result = validate_proposal_v2(
+        proposal(*TIER),
+        source_fields=CRM,
+        target_field=entity_fields("support.v1.json", "User")["tier"],
+        samples=CUSTOMERS,
+    )
+    assert Code.INFORMATION_LOSS_ENUM in codes(result)
+    assert review_decision_v2_1(MappingType.DERIVED, result, 1.0)[0] is ReviewStatus.AUTO_ACCEPTED
+
+
+def test_v21_still_forces_review_for_the_v2_null_and_constant_checks() -> None:
+    result = v2(NEVER_MATCHES, "last_name", records=only("Asha Verma", "Ravi Iyer"))
+    assert review_decision_v2_1(MappingType.TRANSFORMATION, result, 1.0)[0] is (
+        ReviewStatus.NEEDS_REVIEW
+    )
+
+
+def test_the_forcing_sets_are_exactly_what_the_policies_say() -> None:
+    assert LOSSY_FORCES_REVIEW == frozenset({Code.LOSSY_TRUNCATION})
+    assert Code.LOSSY_TRUNCATION in REVIEW_FORCING_CODES_V2_1
+    assert Code.LOSSY_COLLAPSE not in REVIEW_FORCING_CODES_V2_1
+    assert REVIEW_FORCING_CODES_V2_1 == REVIEW_FORCING_CODES_V2 | {Code.LOSSY_TRUNCATION}
+    assert Code.LOSSY_TRUNCATION not in REVIEW_FORCING_CODES_V2, "v2 is not rewritten"
+
+
+WARN_CODES = [
+    c
+    for c in Code
+    if c
+    not in {
+        Code.SOURCE_FIELD_MISSING, Code.SOURCES_MISMATCH, Code.TYPE_INCONSISTENT,
+        Code.EXECUTION_ERROR, Code.TYPE_MISMATCH, Code.FORMAT_MISMATCH, Code.ENUM_VIOLATION,
+        Code.PATTERN_VIOLATION, Code.RANGE_VIOLATION, Code.LENGTH_VIOLATION,
+        Code.NULL_FOR_REQUIRED_TARGET, Code.TARGET_NOT_COVERED, Code.DUPLICATE_TARGET_COVERAGE,
+        Code.UNRESOLVED, Code.AMBIGUOUS_ALTERNATIVES, Code.AMBIGUOUS_RETRIEVAL,
+    }
+]  # fmt: skip
+
+
+@settings(max_examples=300, deadline=None)
+@given(st.lists(st.sampled_from(WARN_CODES), max_size=6), st.floats(min_value=0.7, max_value=1.0))
+def test_property_v21_forces_review_exactly_for_its_forcing_codes(
+    present: list[Code], score: float
+) -> None:
+    from app.mapping.validate import Reason
+
+    validation = ValidationResult(
+        Status.WARN if present else Status.PASS, tuple(Reason(c, "x") for c in present)
+    )
+    status, _ = review_decision_v2_1(MappingType.TRANSFORMATION, validation, score)
+    forced = bool(set(present) & REVIEW_FORCING_CODES_V2_1)
+    assert (status is ReviewStatus.NEEDS_REVIEW) == forced
+    if Code.LOSSY_TRUNCATION in present:
+        assert status is ReviewStatus.NEEDS_REVIEW
+    if present and set(present) <= {Code.LOSSY_COLLAPSE}:
+        assert status is ReviewStatus.AUTO_ACCEPTED
 
 
 def test_the_correct_remainder_pipeline_is_not_flagged_but_first_token_is_a_known_lossy_case() -> (

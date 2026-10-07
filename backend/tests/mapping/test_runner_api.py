@@ -445,3 +445,45 @@ def test_the_requirement_is_accepted_shown_to_the_model_and_stored(
     assert stored.requirement == text
     plain = start_run(client, versions)
     assert plain["requirement"] is None
+
+
+def test_validator_versions_are_selectable_and_unknown_ones_are_refused(
+    session: Session, versions: tuple[IngestResult, IngestResult]
+) -> None:
+    from app.mapping.runner import VALIDATORS, MappingRunError
+
+    assert set(VALIDATORS) == {"v1", "v2", "v2.1"}
+    crm, support = versions
+    outcomes = {}
+    for name in ("v1", "v2", "v2.1"):
+        result = run_mapping(
+            session,
+            correct_llm(),
+            FakeEmbeddingProvider(),
+            source_version_id=crm.version_id,
+            target_version_id=support.version_id,
+            source_entity="Customer",
+            target_entity="User",
+            mode="full_schema",
+            samples_dir=SAMPLES,
+            validator=name,
+        )
+        outcomes[name] = {i.target_field: i for i in result.items}
+    # the correct S1 mappings carry no v2 finding, so every version agrees on them
+    for field in outcomes["v1"]:
+        a, b, c = (outcomes[v][field] for v in ("v1", "v2", "v2.1"))
+        assert (a.confidence, b.confidence, c.confidence) == (a.confidence,) * 3, field
+        assert a.review_status == b.review_status == c.review_status, field
+    with pytest.raises(MappingRunError, match="unknown validator"):
+        run_mapping(
+            session,
+            correct_llm(),
+            FakeEmbeddingProvider(),
+            source_version_id=crm.version_id,
+            target_version_id=support.version_id,
+            source_entity="Customer",
+            target_entity="User",
+            mode="full_schema",
+            samples_dir=SAMPLES,
+            validator="v9",
+        )

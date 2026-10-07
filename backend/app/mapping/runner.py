@@ -38,9 +38,19 @@ from app.mapping.validate import (
     validate_proposal,
     validate_run,
 )
-from app.mapping.validate_v2 import review_decision_v2, validate_proposal_v2
+from app.mapping.validate_v2 import (
+    review_decision_v2,
+    review_decision_v2_1,
+    validate_proposal_v2,
+)
 
 _COMPOUND = ("object", "array")
+# Validator versions. v1 is the frozen original; v2 and v2.1 are post-hoc (see docs/mapping.md).
+VALIDATORS = {
+    "v1": (validate_proposal, review_decision),
+    "v2": (validate_proposal_v2, review_decision_v2),
+    "v2.1": (validate_proposal_v2, review_decision_v2_1),
+}
 DEFAULT_TOP_K = 5
 POOL_LIMIT = 10_000
 
@@ -132,6 +142,11 @@ def run_mapping(
     target_version = session.get(SystemVersion, target_version_id)
     if source_version is None or target_version is None:
         raise MappingRunError("unknown source or target system version")
+    if validator not in VALIDATORS:
+        raise MappingRunError(
+            f"unknown validator {validator!r}; choose one of {sorted(VALIDATORS)}"
+        )
+    validate_with, decide = VALIDATORS[validator]
     source_pairs = load_entity_fields(session, source_version_id, source_entity)
     target_pairs = load_entity_fields(session, target_version_id, target_entity)
     source_fields = {f.path: f for _, f in source_pairs}
@@ -175,8 +190,7 @@ def run_mapping(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
         )
-        validate = validate_proposal_v2 if validator == "v2" else validate_proposal
-        validation = validate(
+        validation = validate_with(
             outcome.proposal,
             source_fields=source_fields,
             target_field=target_field,
@@ -191,7 +205,6 @@ def run_mapping(
                 validation, ranks, outcome.proposal.source_fields, outcome.proposal.certainty
             )
         )
-        decide = review_decision_v2 if validator == "v2" else review_decision
         status, reasons = decide(outcome.proposal.mapping_type, validation, score)
         items.append(
             MappingItem(
