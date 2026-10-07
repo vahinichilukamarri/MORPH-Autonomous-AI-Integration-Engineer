@@ -40,3 +40,15 @@ docker compose up -d --build --wait mock-crm mock-support
 
 Defaults for the credentials live in `.env.example` (`CRM_API_KEY`, `SUPPORT_TOKEN`,
 `ADMIN_TOKEN`).
+
+## Admin API (`/__admin`, `X-Admin-Token`)
+
+Not part of the public OpenAPI document, so discovery and mapping never see it.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET/PUT/DELETE /__admin/faults` | failure injection profile |
+| `POST /__admin/reset` | restore seed data, clear faults and the request log |
+| `GET /__admin/state` | dump all records of the system |
+| `PUT /__admin/state` | replace all records (`{"records": [...]}`), validated; `422` leaves state unchanged |
+| `GET/DELETE /__admin/requests` | request log: method, path, query, status and which auth header was present (never its value) |

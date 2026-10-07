@@ -145,6 +145,8 @@ def create_app(token: str | None = None, admin_token: str | None = None) -> Fast
         admin_token=admin_token,
         renames=V2_RENAMES,
         reset_state=store.reset,
+        dump_state=store.dump,
+        load_state=store.load,
         error_body=lambda status, message: {
             "error": {"code": "INJECTED_FAULT", "message": message, "details": []}
         },

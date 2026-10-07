@@ -1,5 +1,9 @@
+import builtins
 import random
 from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from pydantic import ValidationError
 
 from crm.models import Customer, CustomerCreate, CustomerPatch, CustomerSegment, CustomerStatus
 
@@ -42,6 +46,9 @@ def _seed_customers() -> list[Customer]:
     return customers
 
 
+Records = builtins.list[dict[str, Any]]
+
+
 class CustomerStore:
     def __init__(self) -> None:
         self._customers: dict[str, Customer] = {}
@@ -78,3 +85,18 @@ class CustomerStore:
         updated = Customer.model_validate(current.model_dump() | changes)
         self._customers[customer_id] = updated
         return updated
+
+    def dump(self) -> Records:
+        return [c.model_dump(mode="json") for c in self._customers.values()]
+
+    def load(self, records: Records) -> None:
+        """Replace all customers (admin only). New ids continue after the highest loaded id."""
+        try:
+            customers = [Customer.model_validate(r) for r in records]
+        except ValidationError as error:
+            raise ValueError(f"invalid customer record: {error.error_count()} error(s)") from error
+        if len({c.customer_id for c in customers}) != len(customers):
+            raise ValueError("duplicate customer_id")
+        self._customers = {c.customer_id: c for c in customers}
+        numbers = [int(c.customer_id[2:]) for c in customers if c.customer_id[2:].isdigit()]
+        self._next_id = max([FIRST_NEW_ID - 1, *numbers]) + 1

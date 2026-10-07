@@ -1,3 +1,7 @@
+from typing import Any
+
+from pydantic import ValidationError
+
 from support.models import User
 
 
@@ -23,3 +27,16 @@ class UserStore:
         created = user.userId not in self._users
         self._users[user.userId] = user
         return created
+
+    def dump(self) -> list[dict[str, Any]]:
+        return [u.model_dump(mode="json") for u in self._users.values()]
+
+    def load(self, records: list[dict[str, Any]]) -> None:
+        """Replace all users (admin only)."""
+        try:
+            users = [User.model_validate(r) for r in records]
+        except ValidationError as error:
+            raise ValueError(f"invalid user record: {error.error_count()} error(s)") from error
+        if len({u.userId for u in users}) != len(users):
+            raise ValueError("duplicate userId")
+        self._users = {u.userId: u for u in users}

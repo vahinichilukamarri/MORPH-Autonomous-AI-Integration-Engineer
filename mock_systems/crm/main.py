@@ -75,6 +75,8 @@ def create_app(api_key: str | None = None, admin_token: str | None = None) -> Fa
         admin_token=admin_token,
         renames=V2_RENAMES,
         reset_state=store.reset,
+        dump_state=store.dump,
+        load_state=store.load,
         error_body=lambda _status, message: {"detail": message},
     )
     return app

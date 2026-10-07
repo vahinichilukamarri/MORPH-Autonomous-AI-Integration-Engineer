@@ -26,6 +26,7 @@ _EXEMPT_PATHS = ("/openapi.json", "/docs", "/redoc")
 _BODY_METHODS = {"POST", "PUT", "PATCH"}
 
 ErrorBodyFactory = Callable[[int, str], dict[str, Any]]
+MAX_LOGGED_REQUESTS = 20_000
 
 
 class FaultProfile(BaseModel):
@@ -273,8 +274,87 @@ def _rename_schema(schema: dict[str, Any], mapping: dict[str, str]) -> None:
             component["required"] = [mapping.get(k, k) for k in component["required"]]
 
 
+class RequestLogEntry(BaseModel):
+    seq: int
+    method: str
+    path: str
+    query: str
+    status: int
+    auth_header: Literal["x-api-key", "authorization", "none"]
+
+
+class RequestLog:
+    """Every non-admin request seen by the system, for black-box verification by the oracle.
+
+    Header values are never recorded, only which authentication header was present.
+    """
+
+    def __init__(self) -> None:
+        self.entries: list[RequestLogEntry] = []
+        self._seq = 0
+
+    def clear(self) -> None:
+        self.entries = []
+
+    def add(self, entry: dict[str, Any]) -> None:
+        self._seq += 1
+        self.entries.append(RequestLogEntry(seq=self._seq, **entry))
+        del self.entries[:-MAX_LOGGED_REQUESTS]
+
+
+class RequestLogMiddleware:
+    """Outermost middleware, so injected faults and authentication failures are logged too."""
+
+    def __init__(self, app: ASGIApp, log: RequestLog) -> None:
+        self.app = app
+        self.log = log
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        path = str(scope.get("path", ""))
+        if scope["type"] != "http" or path.startswith(ADMIN_PREFIX):
+            await self.app(scope, receive, send)
+            return
+        names = {k.lower() for k, _ in scope.get("headers", [])}
+        auth: Literal["x-api-key", "authorization", "none"] = "none"
+        if b"x-api-key" in names:
+            auth = "x-api-key"
+        elif b"authorization" in names:
+            auth = "authorization"
+        status = 0
+
+        async def recording(message: Message) -> None:
+            nonlocal status
+            if message["type"] == "http.response.start":
+                status = int(message["status"])
+            await send(message)
+
+        try:
+            await self.app(scope, receive, recording)
+        finally:
+            self.log.add(
+                {
+                    "method": str(scope["method"]),
+                    "path": path,
+                    "query": scope.get("query_string", b"").decode("latin-1"),
+                    "status": status,
+                    "auth_header": auth,
+                }
+            )
+
+
+class StateDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    records: list[dict[str, Any]]
+
+
 def _build_admin_app(
-    controller: FaultController, admin_token: str, reset_state: Callable[[], None]
+    controller: FaultController,
+    admin_token: str,
+    reset_state: Callable[[], None],
+    log: RequestLog,
+    dump_state: Callable[[], list[dict[str, Any]]],
+    load_state: Callable[[list[dict[str, Any]]], None],
 ) -> FastAPI:
     def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
         if x_admin_token is None or not secrets.compare_digest(x_admin_token, admin_token):
@@ -300,7 +380,29 @@ def _build_admin_app(
     def reset() -> FaultProfile:
         reset_state()
         controller.clear()
+        log.clear()
         return controller.profile
+
+    @admin.get("/state")
+    def get_state() -> StateDocument:
+        return StateDocument(records=dump_state())
+
+    @admin.put("/state")
+    def put_state(document: StateDocument) -> StateDocument:
+        try:
+            load_state(document.records)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return StateDocument(records=dump_state())
+
+    @admin.get("/requests")
+    def get_requests() -> list[RequestLogEntry]:
+        return log.entries
+
+    @admin.delete("/requests")
+    def delete_requests() -> dict[str, int]:
+        log.clear()
+        return {"entries": 0}
 
     return admin
 
@@ -311,6 +413,8 @@ def install_faults(
     admin_token: str | None,
     renames: dict[str, str],
     reset_state: Callable[[], None],
+    dump_state: Callable[[], list[dict[str, Any]]],
+    load_state: Callable[[list[dict[str, Any]]], None],
     error_body: ErrorBodyFactory,
 ) -> FaultController:
     """Attach failure injection to a mock system.
@@ -324,7 +428,13 @@ def install_faults(
     app.add_middleware(
         FaultMiddleware, controller=controller, renames=renames, error_body=error_body
     )
-    app.mount(ADMIN_PREFIX, _build_admin_app(controller, token, reset_state))
+    log = RequestLog()
+    app.state.request_log = log
+    app.add_middleware(RequestLogMiddleware, log=log)
+    app.mount(
+        ADMIN_PREFIX,
+        _build_admin_app(controller, token, reset_state, log, dump_state, load_state),
+    )
 
     base_openapi: Callable[[], dict[str, Any]] = app.openapi
 
