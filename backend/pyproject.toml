@@ -61,3 +61,4 @@ markers = [
 [tool.ruff.lint.per-file-ignores]
 "tests/codegen/test_containment.py" = ["E501"]
 "tests/codegen/test_gate.py" = ["E501"]
+"tests/codegen/test_llm_codegen.py" = ["E501"]

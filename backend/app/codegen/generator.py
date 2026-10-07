@@ -32,6 +32,16 @@ raise SystemExit(
 '''
 
 
+MAIN_MODULE = '''"""Entry point: python -m integration. Generated; do not edit."""
+
+from morph_runtime.cli import run_module
+
+from integration import sync
+
+raise SystemExit(run_module(sync.run))
+'''
+
+
 @dataclass(frozen=True)
 class GeneratedPackage:
     files: dict[str, str]
@@ -155,19 +165,29 @@ def render_strategy(strategy: dict[str, Any]) -> str:
 
 
 def generate_package(
-    inp: CodegenInput, plan: OperationPlan, decision: GateDecision
+    inp: CodegenInput,
+    plan: OperationPlan,
+    decision: GateDecision,
+    *,
+    strategy: dict[str, Any] | None = None,
+    sync_source: str | None = None,
 ) -> GeneratedPackage:
+    """The package for condition D (default), L1 (``strategy`` given) or L2 (``sync_source``)."""
     included = decision.included
-    strategy = derive_strategy(plan, included)
     specs = [FieldSpec(m.target_field, m.transformation) for m in included if m.transformation]
     files = {
         "integration/__init__.py": "",
-        "integration/__main__.py": MAIN,
         "integration/clients.py": render_clients(plan),
-        "integration/strategy.py": render_strategy(strategy),
         "integration/transform.py": compile_transform_module(specs),
     }
-    return GeneratedPackage(files=files, strategy=strategy)
+    if sync_source is not None:
+        files["integration/__main__.py"] = MAIN_MODULE
+        files["integration/sync.py"] = sync_source.rstrip() + "\n"
+        return GeneratedPackage(files=files, strategy={})
+    chosen = strategy if strategy is not None else derive_strategy(plan, included)
+    files["integration/__main__.py"] = MAIN
+    files["integration/strategy.py"] = render_strategy(chosen)
+    return GeneratedPackage(files=files, strategy=chosen)
 
 
 __all__ = ["COMPILER_VERSION", "GENERATOR_VERSION", "RUNTIME_VERSION", "generate_package"]

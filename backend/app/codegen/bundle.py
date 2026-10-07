@@ -32,7 +32,9 @@ def bundle_hash(files: Mapping[str, str]) -> str:
     return sha256_text(canonical(sorted((path, sha256_text(text)) for path, text in files.items())))
 
 
-def input_hash(inp: CodegenInput, condition: str, *, allow_partial: bool) -> str:
+def input_hash(
+    inp: CodegenInput, condition: str, *, allow_partial: bool, llm_identity: str = ""
+) -> str:
     fields = [
         {
             "target_field": m.target_field,
@@ -53,6 +55,7 @@ def input_hash(inp: CodegenInput, condition: str, *, allow_partial: bool) -> str
                 "gate": GATE_VERSION,
                 "condition": condition,
                 "allow_partial": allow_partial,
+                "llm": llm_identity,
                 "source": [inp.source.spec_hash, inp.source_entity],
                 "target": [inp.target.spec_hash, inp.target_entity],
                 "fields": fields,

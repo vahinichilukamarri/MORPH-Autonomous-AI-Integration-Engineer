@@ -20,6 +20,7 @@ from app.codegen.gate_tools import run_tool_gate
 from app.codegen.generated_tests import TESTS_PACKAGE, render_tests
 from app.codegen.generator import GENERATOR_VERSION, RUNTIME_VERSION, generate_package
 from app.codegen.inputs import CodegenInput, load_input
+from app.codegen.llm_codegen import PROMPT_VERSION, propose_strategy, propose_sync_module
 from app.codegen.operations import OperationPlan, PlanError, analyse
 from app.codegen.review_gate import GateDecision, GateStatus, decide
 from app.codegen.sandbox import Outcome, SandboxRunner
@@ -28,13 +29,17 @@ from app.db_models import (
     Integration,
     IntegrationFile,
     IntegrationVersion,
+    LLMCall,
     SandboxRunRow,
 )
+from app.llm.base import Attempt, BaseLLMProvider
+from app.mapping.transform import JsonScalar
 
-CONDITIONS = ("D",)
+CONDITIONS = ("D", "L1", "L2")
 
 BLOCKED_PENDING_REVIEW = "BLOCKED_PENDING_REVIEW"
 BLOCKED_UNSUPPORTED = "BLOCKED_UNSUPPORTED"
+LLM_INVALID = "LLM_INVALID"
 GATE_FAILED = "GATE_FAILED"
 GENERATED = "GENERATED"
 GENERATED_PARTIAL = "GENERATED_PARTIAL"
@@ -83,6 +88,7 @@ def _persist(
     files: dict[str, str],
     manifest: dict[str, Any],
     gates: list[GateResult],
+    attempts: tuple[Attempt, ...] = (),
 ) -> IntegrationVersion:
     last = session.scalar(
         select(IntegrationVersion)
@@ -116,6 +122,27 @@ def _persist(
     for row in _gate_rows(gates):
         row.integration_version_id = version.id
         session.add(row)
+    for number, attempt in enumerate(attempts, start=1):
+        meta = attempt.metadata
+        session.add(
+            LLMCall(
+                mapping_run_id=inp.mapping_run_id,
+                integration_version_id=version.id,
+                target_field=None,
+                attempt=number,
+                provider=meta.provider,
+                model=meta.model,
+                prompt_hash=meta.prompt_hash,
+                input_tokens=meta.input_tokens,
+                output_tokens=meta.output_tokens,
+                reasoning_tokens=meta.reasoning_tokens,
+                latency_ms=meta.latency_ms,
+                outcome=meta.outcome.value,
+                source=meta.source,
+                http_attempts=meta.http_attempts,
+                error=meta.error,
+            )
+        )
     session.flush()
     return version
 
@@ -128,6 +155,43 @@ def _status_after_gates(partial: bool, passed_ast: bool, tools: list[GateResult]
     return READY_PARTIAL if partial else READY
 
 
+def _llm_info(
+    llm: BaseLLMProvider, prompt_hash: str, attempts: tuple[Attempt, ...], error: str | None
+) -> dict[str, Any]:
+    return {
+        "prompt_version": PROMPT_VERSION,
+        "provider": llm.name,
+        "model": getattr(llm, "model", ""),
+        "prompt_hash": prompt_hash,
+        "calls": len(attempts),
+        "input_tokens": sum(a.metadata.input_tokens or 0 for a in attempts),
+        "output_tokens": sum(a.metadata.output_tokens or 0 for a in attempts),
+        "reasoning_tokens": sum(a.metadata.reasoning_tokens or 0 for a in attempts),
+        "error": error,
+    }
+
+
+def _llm_failed(
+    session: Session,
+    integration: Integration,
+    inp: CodegenInput,
+    condition: str,
+    decision: GateDecision,
+    in_hash: str,
+    llm_info: dict[str, Any],
+    attempts: tuple[Attempt, ...],
+) -> IntegrationVersion:
+    """The model's output was invalid after the single re-ask: record it, never fall back to D."""
+    manifest = build_manifest(
+        inp, condition=condition, status=LLM_INVALID, decision=decision, strategy=None, files={}
+    )
+    manifest["llm"] = llm_info
+    return _persist(
+        session, integration, inp, status=LLM_INVALID, in_hash=in_hash, files={},
+        manifest=manifest, gates=[], attempts=attempts,
+    )  # fmt: skip
+
+
 def generate_from_input(
     session: Session,
     inp: CodegenInput,
@@ -135,12 +199,22 @@ def generate_from_input(
     condition: str = "D",
     allow_partial: bool = False,
     runner: SandboxRunner | None = None,
+    llm: BaseLLMProvider | None = None,
+    temperature: float = 0.0,
+    max_output_tokens: int | None = None,
 ) -> IntegrationVersion:
     """Generate an integration version for ``inp``. Reuses the latest version if nothing changed."""
     if condition not in CONDITIONS:
         raise GenerationError(f"condition {condition!r} is not available")
+    if condition != "D" and llm is None:
+        raise GenerationError(f"condition {condition} needs an LLM provider")
     integration = _get_or_create_integration(session, inp, condition)
-    in_hash = input_hash(inp, condition, allow_partial=allow_partial)
+    identity = (
+        ""
+        if llm is None or condition == "D"
+        else f"{PROMPT_VERSION}:{llm.name}:{getattr(llm, 'model', '')}"
+    )
+    in_hash = input_hash(inp, condition, allow_partial=allow_partial, llm_identity=identity)
     latest = session.scalar(
         select(IntegrationVersion)
         .where(IntegrationVersion.integration_id == integration.id)
@@ -173,18 +247,54 @@ def generate_from_input(
     decision = decide(inp, plan, allow_partial=allow_partial)
     if decision.status is GateStatus.BLOCKED:
         return blocked(BLOCKED_PENDING_REVIEW, decision, None)
+    llm_info: dict[str, Any] | None = None
+    attempts: tuple[Attempt, ...] = ()
+    strategy_override: dict[str, Any] | None = None
+    sync_source: str | None = None
+    extra_samples: tuple[dict[str, JsonScalar], ...] = ()
+    if condition == "L1":
+        assert llm is not None
+        proposed = propose_strategy(
+            llm, inp, decision, temperature=temperature, max_output_tokens=max_output_tokens
+        )
+        attempts = proposed.attempts
+        llm_info = _llm_info(llm, proposed.prompt_hash, attempts, proposed.error)
+        llm_info["dropped_edge_records"] = list(proposed.dropped_edge_records)
+        llm_info["edge_records_used"] = len(proposed.edge_records)
+        if proposed.strategy is None:
+            return _llm_failed(
+                session, integration, inp, condition, decision, in_hash, llm_info, attempts
+            )
+        strategy_override = proposed.strategy
+        extra_samples = proposed.edge_records
+    elif condition == "L2":
+        assert llm is not None
+        module = propose_sync_module(
+            llm, inp, decision, temperature=temperature, max_output_tokens=max_output_tokens
+        )
+        attempts = module.attempts
+        llm_info = _llm_info(llm, module.prompt_hash, attempts, module.error)
+        if module.source is None:
+            return _llm_failed(
+                session, integration, inp, condition, decision, in_hash, llm_info, attempts
+            )
+        sync_source = module.source
     try:
-        package = generate_package(inp, plan, decision)
+        package = generate_package(
+            inp, plan, decision, strategy=strategy_override, sync_source=sync_source
+        )
     except PlanError as error:
         return blocked(BLOCKED_UNSUPPORTED, decision, str(error))
 
-    files = {**package.files, **render_tests(decision.included, inp.samples)}
+    files = {**package.files, **render_tests(decision.included, (*inp.samples, *extra_samples))}
     gates = [check_ast(files)]
     tools: list[GateResult] | None = None
     manifest = build_manifest(
         inp, condition=condition, status=GENERATED, decision=decision, strategy=package.strategy,
         files=files,
     )  # fmt: skip
+    if llm_info is not None:
+        manifest["llm"] = llm_info
     if gates[0].passed and runner is not None:
         with tempfile.TemporaryDirectory(prefix="morph-gate-") as tmp:
             write_bundle(Path(tmp), files, manifest)
@@ -194,7 +304,7 @@ def generate_from_input(
     status = _status_after_gates(partial, gates[0].passed, tools)
     return _persist(
         session, integration, inp, status=status, in_hash=in_hash, files=files,
-        manifest=manifest, gates=gates,
+        manifest=manifest, gates=gates, attempts=attempts,
     )  # fmt: skip
 
 
@@ -206,6 +316,9 @@ def generate(
     allow_partial: bool = False,
     runner: SandboxRunner | None = None,
     samples_dir: Path | None = None,
+    llm: BaseLLMProvider | None = None,
+    temperature: float = 0.0,
+    max_output_tokens: int | None = None,
 ) -> IntegrationVersion:
     return generate_from_input(
         session,
@@ -213,6 +326,9 @@ def generate(
         condition=condition,
         allow_partial=allow_partial,
         runner=runner,
+        llm=llm,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
     )
 
 
