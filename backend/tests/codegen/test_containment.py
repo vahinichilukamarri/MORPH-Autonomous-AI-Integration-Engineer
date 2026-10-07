@@ -47,6 +47,12 @@ def runner_with(**overrides: Any) -> SandboxRunner:
     try:
         runner.verify_limits()
     except LimitsNotEnforced as error:
+        info = docker(
+            "info", "--format", "cgroup={{.CgroupVersion}} swaplimit={{.SwapLimit}} {{.SecurityOptions}}",
+            check=False,
+        ).stdout.strip()  # fmt: skip
+        detail = " ".join(f"{error} | docker: {info}".split())[:1500]
+        print(f"::error title=sandbox limits are not enforced::{detail}")  # shown by CI annotations
         pytest.exit(f"sandbox limits are NOT enforced, stopping: {error}", returncode=3)
     return runner
 
