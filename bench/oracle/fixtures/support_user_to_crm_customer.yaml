@@ -1,0 +1,186 @@
+# Oracle fixture, hand-written. Read-only for agents: never edit or generate from MORPH.
+#
+# Held-out records. Source: Support User. Target: CRM Customer. Internal (admin state) names.
+#
+# This direction is deliberately restrictive, following the reviewed answer key:
+#  * customer_id is externalRef, unchanged. A user without externalRef is NOT syncable: an id is
+#    never invented from userId.
+#  * The CRM assigns ids itself, so a record cannot be created under a given id. A user whose
+#    externalRef is not in the CRM is therefore also NOT syncable, and nothing is created.
+#  * customer_id and created_at are not writable in the CRM (not in the create or update
+#    schemas): the sync must not touch created_at.
+#  * `segment` has no source (the answer key marks it UNRESOLVED). The pipeline under test has a
+#    human CONSTANT "SMB" for it (see `review_override`); that constant is create-only, so it must
+#    never overwrite the segment of an existing customer.
+scenario: support_user_to_crm_customer
+source_system: support
+target_system: crm
+source_key: userId
+target_key: customer_id
+
+# The human decision the review fixture applies. Without it, generation must be BLOCKED.
+review_override:
+  target_field: segment
+  value: SMB
+  reason: >-
+    Test-only human decision. Support has no segment concept, so the field is UNRESOLVED in the
+    answer key; "SMB" is the lowest-commitment default and is only ever sent when creating a
+    customer, which this scenario's rules never do.
+
+# CRM customers present before the first run.
+initial_target:
+  - { customer_id: C-4001, first_name: Old1, last_name: Name1, email: old1@example.com, phone: "+15550000001", status: INACTIVE, segment: ENTERPRISE, created_at: "2022-06-01T08:00:00Z" }
+  - { customer_id: C-4002, first_name: Old2, last_name: Name2, email: old2@example.com, phone: "+15550000002", status: ACTIVE, segment: SMB, created_at: "2022-06-02T08:00:00Z" }
+  - { customer_id: C-4003, first_name: Old3, last_name: null, email: old3@example.com, phone: null, status: ACTIVE, segment: MIDMARKET, created_at: "2022-06-03T08:00:00Z" }
+  - { customer_id: C-4005, first_name: Sam, last_name: Lee, email: sam@example.com, phone: "+15550000005", status: ACTIVE, segment: SMB, created_at: "2022-06-05T08:00:00Z" }
+  - { customer_id: C-4006, first_name: Old6, last_name: Name6, email: old6@example.com, phone: null, status: ACTIVE, segment: ENTERPRISE, created_at: "2022-06-06T08:00:00Z" }
+  - { customer_id: C-4007, first_name: Old7, last_name: Name7, email: old7@example.com, phone: "+15550000007", status: ACTIVE, segment: SMB, created_at: "2022-06-07T08:00:00Z" }
+  - { customer_id: C-4008, first_name: Bystander, last_name: Untouched, email: bystander@example.com, phone: "+15550000008", status: ACTIVE, segment: MIDMARKET, created_at: "2022-06-08T08:00:00Z" }
+
+records:
+  - name: imported-user-updates-its-customer
+    why: >-
+      The ordinary case: the user's data overwrites the customer's contact fields and status, the
+      segment (ENTERPRISE) is left alone, and created_at is not touched.
+    source:
+      userId: 5001
+      externalRef: C-4001
+      fullName: Asha Verma
+      email_address: asha.verma@example.com
+      phoneNumber: "919876543210"
+      accountState: ENABLED
+      tier: PRIORITY
+      createdAt: 1709633730
+    outcome: UPDATED
+    expect: { customer_id: C-4001, first_name: Asha, last_name: Verma, email: asha.verma@example.com, phone: "+919876543210", status: ACTIVE, segment: ENTERPRISE, created_at: "2022-06-01T08:00:00Z" }
+
+  - name: single-name-and-null-phone-clear-the-crm-values
+    why: >-
+      A user with a single name has no last name: the CRM last_name (Name2) must become null, not
+      stay stale and not become an empty string. A null phone must clear the CRM phone.
+    source:
+      userId: 5002
+      externalRef: C-4002
+      fullName: Kiran
+      email_address: kiran@example.com
+      phoneNumber: null
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1672531200
+    outcome: UPDATED
+    expect: { customer_id: C-4002, first_name: Kiran, last_name: null, email: kiran@example.com, phone: null, status: ACTIVE, segment: SMB, created_at: "2022-06-02T08:00:00Z" }
+
+  - name: null-external-ref-is-not-syncable
+    why: >-
+      Never fabricate an id: no C-5003, no matching by email, no customer created. The report
+      must say NOT_SYNCABLE and the CRM must hold exactly the customers it had.
+    source:
+      userId: 5003
+      externalRef: null
+      fullName: Nina Rao
+      email_address: nina@example.com
+      phoneNumber: "14155550123"
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1700000000
+    outcome: NOT_SYNCABLE
+
+  - name: external-ref-not-in-the-crm
+    why: >-
+      The CRM cannot create a customer under a given id, so a dangling externalRef is not
+      syncable either. Nothing may be created under another id.
+    source:
+      userId: 5004
+      externalRef: C-4999
+      fullName: Omar Khan
+      email_address: omar@example.com
+      phoneNumber: "447700900001"
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1700000001
+    outcome: NOT_SYNCABLE
+
+  - name: first-space-split-and-disabled
+    why: >-
+      "Mary Ann Smith" splits on the first space only: first_name Mary, last_name "Ann Smith"
+      (the answer key convention); DISABLED -> INACTIVE.
+    source:
+      userId: 5005
+      externalRef: C-4003
+      fullName: Mary Ann Smith
+      email_address: maryann@example.com
+      phoneNumber: "447700900123"
+      accountState: DISABLED
+      tier: STANDARD
+      createdAt: 1700000002
+    outcome: UPDATED
+    expect: { customer_id: C-4003, first_name: Mary, last_name: Ann Smith, email: maryann@example.com, phone: "+447700900123", status: INACTIVE, segment: MIDMARKET, created_at: "2022-06-03T08:00:00Z" }
+
+  - name: blocked-becomes-suspended
+    why: BLOCKED -> SUSPENDED (the third state of the vocabulary).
+    source:
+      userId: 5006
+      externalRef: C-4006
+      fullName: Pia Das
+      email_address: pia@example.com
+      phoneNumber: "919800000001"
+      accountState: BLOCKED
+      tier: PRIORITY
+      createdAt: 1700000003
+    outcome: UPDATED
+    expect: { customer_id: C-4006, first_name: Pia, last_name: Das, email: pia@example.com, phone: "+919800000001", status: SUSPENDED, segment: ENTERPRISE, created_at: "2022-06-06T08:00:00Z" }
+
+  - name: partial-change-only-sends-what-differs
+    why: >-
+      Only the email and name differ from the CRM record; the unchanged phone and status must
+      stay as they are (a PATCH carrying only the changes).
+    source:
+      userId: 5007
+      externalRef: C-4007
+      fullName: Raj Nair
+      email_address: raj@example.com
+      phoneNumber: "15550000007"
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1700000004
+    outcome: UPDATED
+    expect: { customer_id: C-4007, first_name: Raj, last_name: Nair, email: raj@example.com, phone: "+15550000007", status: ACTIVE, segment: SMB, created_at: "2022-06-07T08:00:00Z" }
+
+  - name: already-in-sync
+    why: "The CRM already holds exactly the mapped values, so no write may be issued at all."
+    source:
+      userId: 5008
+      externalRef: C-4005
+      fullName: Sam Lee
+      email_address: sam@example.com
+      phoneNumber: "15550000005"
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1700000005
+    outcome: UNCHANGED
+    expect: { customer_id: C-4005, first_name: Sam, last_name: Lee, email: sam@example.com, phone: "+15550000005", status: ACTIVE, segment: SMB, created_at: "2022-06-05T08:00:00Z" }
+
+# CRM customers no user refers to: they must be exactly as before (no collateral writes).
+untouched_after: [C-4008]
+
+# A key the operator supplies that does not exist in Support: FAILED(NOT_FOUND), run continues.
+missing_source_key: 5999
+
+# Records the target must reject (seeded with the others, own run). Customer C-4010 exists.
+reject_target_extra:
+  - { customer_id: C-4010, first_name: Placeholder, last_name: Name, email: placeholder@example.com, phone: null, status: ACTIVE, segment: SMB, created_at: "2022-06-10T08:00:00Z" }
+rejects:
+  - name: first-name-over-100-characters
+    why: >-
+      Support allows 200 characters in fullName, the CRM only 100 in first_name. The CRM rejects
+      the update; the integration must report FAILED(VALIDATION, first_name) and carry on.
+    source:
+      userId: 5010
+      externalRef: C-4010
+      fullName: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Smith"
+      email_address: placeholder@example.com
+      phoneNumber: null
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1700000010
+    field: first_name

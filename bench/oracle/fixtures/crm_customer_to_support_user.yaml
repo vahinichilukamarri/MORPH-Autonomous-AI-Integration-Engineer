@@ -1,0 +1,251 @@
+# Oracle fixture, hand-written. Read-only for agents: never edit or generate from MORPH.
+#
+# Held-out records for the oracle: none of these appear in mock_systems/samples (which the
+# mapping prompts and the generated tests may see). Expected values are written out by hand from
+# the answer key, not computed by running any pipeline; a bench test checks that the hand-written
+# reference pipelines agree with them.
+#
+# Record names are internal (admin state) names. Source: CRM Customer. Target: Support User.
+scenario: crm_customer_to_support_user
+source_system: crm
+target_system: support
+source_key: customer_id
+target_key: userId
+
+# Records seeded into the CRM. `expect` is what the Support desk must hold afterwards
+# (internal field names), and the outcome the integration must report on the first run.
+records:
+  - name: plain-enterprise
+    why: The ordinary case, so a pass on the edge records means something.
+    source:
+      customer_id: C-3001
+      first_name: Asha
+      last_name: Verma
+      email: asha.verma@example.com
+      phone: "+919876543210"
+      status: ACTIVE
+      segment: ENTERPRISE
+      created_at: "2024-03-05T10:15:30Z"
+    outcome: CREATED
+    expect:
+      userId: 3001
+      externalRef: C-3001
+      fullName: Asha Verma
+      email_address: asha.verma@example.com
+      phoneNumber: "919876543210"
+      accountState: ENABLED
+      tier: PRIORITY
+      createdAt: 1709633730
+
+  - name: null-last-name-null-phone-inactive-smb
+    why: >-
+      Null last name must give the first name alone (no trailing space, not "Kiran None"); null
+      phone must stay null (not "None", not the empty string); INACTIVE -> DISABLED; SMB -> STANDARD.
+    source:
+      customer_id: C-3002
+      first_name: Kiran
+      last_name: null
+      email: kiran@example.com
+      phone: null
+      status: INACTIVE
+      segment: SMB
+      created_at: "2023-01-01T00:00:00Z"
+    outcome: CREATED
+    expect:
+      userId: 3002
+      externalRef: C-3002
+      fullName: Kiran
+      email_address: kiran@example.com
+      phoneNumber: null
+      accountState: DISABLED
+      tier: STANDARD
+      createdAt: 1672531200
+
+  - name: multi-word-first-name-suspended-leap-day-shortest-phone
+    why: >-
+      A first name with a space is joined as is; SUSPENDED -> BLOCKED; MIDMARKET -> STANDARD (the
+      answer key maps only ENTERPRISE to PRIORITY); the last second of a leap day; the shortest
+      phone the CRM accepts (8 digits after the plus).
+    source:
+      customer_id: C-3003
+      first_name: Mary Ann
+      last_name: Smith
+      email: mary.ann@example.com
+      phone: "+12345678"
+      status: SUSPENDED
+      segment: MIDMARKET
+      created_at: "2024-02-29T23:59:59Z"
+    outcome: CREATED
+    expect:
+      userId: 3003
+      externalRef: C-3003
+      fullName: Mary Ann Smith
+      email_address: mary.ann@example.com
+      phoneNumber: "12345678"
+      accountState: BLOCKED
+      tier: STANDARD
+      createdAt: 1709251199
+
+  - name: padded-names-longest-phone
+    why: >-
+      Leading and trailing whitespace in the CRM names must be trimmed so the Support fullName
+      pattern (single spaces, no padding) holds; the longest phone the CRM accepts (15 digits).
+    source:
+      customer_id: C-3004
+      first_name: " Ravi "
+      last_name: "Iyer "
+      email: ravi.iyer@example.com
+      phone: "+123456789012345"
+      status: ACTIVE
+      segment: SMB
+      created_at: "2021-07-15T06:30:00Z"
+    outcome: CREATED
+    expect:
+      userId: 3004
+      externalRef: C-3004
+      fullName: Ravi Iyer
+      email_address: ravi.iyer@example.com
+      phoneNumber: "123456789012345"
+      accountState: ENABLED
+      tier: STANDARD
+      createdAt: 1626330600
+
+  - name: unicode-names-epoch-zero
+    why: Non-ASCII names pass through unchanged; the Unix epoch is 0, not null and not an error.
+    source:
+      customer_id: C-3005
+      first_name: Zoë
+      last_name: Müller
+      email: zoe.mueller@example.com
+      phone: "+4915112345678"
+      status: ACTIVE
+      segment: ENTERPRISE
+      created_at: "1970-01-01T00:00:00Z"
+    outcome: CREATED
+    expect:
+      userId: 3005
+      externalRef: C-3005
+      fullName: Zoë Müller
+      email_address: zoe.mueller@example.com
+      phoneNumber: "4915112345678"
+      accountState: ENABLED
+      tier: PRIORITY
+      createdAt: 0
+
+  - name: empty-string-last-name
+    why: >-
+      An empty last name is not a name: it must be skipped like null, giving "Noor" and not
+      "Noor " (which the Support fullName pattern would reject).
+    source:
+      customer_id: C-3006
+      first_name: Noor
+      last_name: ""
+      email: noor@example.com
+      phone: null
+      status: INACTIVE
+      segment: MIDMARKET
+      created_at: "2024-12-31T23:59:59Z"
+    outcome: CREATED
+    expect:
+      userId: 3006
+      externalRef: C-3006
+      fullName: Noor
+      email_address: noor@example.com
+      phoneNumber: null
+      accountState: DISABLED
+      tier: STANDARD
+      createdAt: 1735689599
+
+  - name: large-id-after-2038
+    why: >-
+      An 8-digit id must become an integer (99999999) and keep its text in externalRef; a
+      timestamp one second past 2^31-1 must not overflow.
+    source:
+      customer_id: C-99999999
+      first_name: Big
+      last_name: Id
+      email: big.id@example.com
+      phone: "+14155550123"
+      status: ACTIVE
+      segment: ENTERPRISE
+      created_at: "2038-01-19T03:14:08Z"
+    outcome: CREATED
+    expect:
+      userId: 99999999
+      externalRef: C-99999999
+      fullName: Big Id
+      email_address: big.id@example.com
+      phoneNumber: "14155550123"
+      accountState: ENABLED
+      tier: PRIORITY
+      createdAt: 2147483648
+
+  - name: leading-zeros-in-id
+    why: >-
+      C-007 becomes userId 7 (the numeric part as an integer) while externalRef keeps "C-007"
+      exactly as written.
+    source:
+      customer_id: C-007
+      first_name: Lead
+      last_name: Zero
+      email: lead.zero@example.com
+      phone: "+442071838750"
+      status: SUSPENDED
+      segment: ENTERPRISE
+      created_at: "2024-03-05T10:15:30Z"
+    outcome: CREATED
+    expect:
+      userId: 7
+      externalRef: C-007
+      fullName: Lead Zero
+      email_address: lead.zero@example.com
+      phoneNumber: "442071838750"
+      accountState: BLOCKED
+      tier: PRIORITY
+      createdAt: 1709633730
+
+# Records the target must reject (seeded together with `plain-enterprise` in a separate run).
+# Each must end FAILED(VALIDATION) naming the field, without stopping the other records.
+rejects:
+  - name: userId-zero
+    why: Support requires userId >= 1; C-0 maps to 0.
+    source:
+      customer_id: C-0
+      first_name: Zero
+      last_name: Id
+      email: zero.id@example.com
+      phone: null
+      status: ACTIVE
+      segment: SMB
+      created_at: "2024-03-05T10:15:30Z"
+    field: userId
+
+  - name: blank-first-name-and-no-last-name
+    why: >-
+      Name parts that are only spaces are skipped, leaving no name at all; Support requires a
+      non-empty fullName, so the record must fail instead of being sent with a made-up name.
+    source:
+      customer_id: C-3101
+      first_name: " "
+      last_name: null
+      email: blank@example.com
+      phone: null
+      status: ACTIVE
+      segment: SMB
+      created_at: "2024-03-05T10:15:30Z"
+    field: fullName
+
+  - name: double-space-inside-first-name
+    why: >-
+      "Mary  Ann Smith" with two spaces breaks the Support fullName pattern. The mapping does not
+      collapse inner spaces, so the target must reject it and the integration must say so.
+    source:
+      customer_id: C-3102
+      first_name: "Mary  Ann"
+      last_name: Smith
+      email: double.space@example.com
+      phone: null
+      status: ACTIVE
+      segment: SMB
+      created_at: "2024-03-05T10:15:30Z"
+    field: fullName

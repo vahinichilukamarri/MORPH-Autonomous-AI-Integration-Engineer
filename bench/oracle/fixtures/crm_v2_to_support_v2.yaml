@@ -1,0 +1,15 @@
+# Oracle fixture, hand-written. Read-only for agents: never edit or generate from MORPH.
+#
+# The first integration again, on the drifted v2 contracts: CRM phone -> phone_number and Support
+# tier -> serviceTier on the wire. The mock systems keep their data under the v1 names internally
+# and translate at the API boundary, so the records and the expected final Support state (read
+# through the admin API, internal names) are exactly those of crm_customer_to_support_user. What
+# differs is that the integration can only get them right by speaking the v2 names: a v1 name
+# sent to a v2 system is rejected with 422, and a v1 name read from a v2 system is missing.
+scenario: crm_v2_to_support_v2
+extends: crm_customer_to_support_user
+source_system: crm
+target_system: support
+source_key: customer_id
+target_key: userId
+contract: v2
