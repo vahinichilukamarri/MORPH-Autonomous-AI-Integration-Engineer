@@ -184,3 +184,37 @@ rejects:
       tier: STANDARD
       createdAt: 1700000010
     field: first_name
+
+# ---- added after the first D run (oracle revision r1, post-hoc) -----------------------------
+# Hand-written from the rules above, not taken from what D did.
+added_after_first_d_run:
+  unknown_enum:
+    why: >-
+      Support sends an accountState outside its vocabulary for user 5001. That record must fail
+      as a validation problem on the CRM status; customer C-4001 must stay exactly as it was;
+      the other records must still sync.
+    record: 5001
+    rewrite: { accountState: ARCHIVED }
+    outcome: FAILED
+    category: VALIDATION
+    field: status
+  bad_created_at:
+    - why: >-
+        createdAt is not a number. The CRM cannot store created_at (not writable), so the
+        mapping never reads it and the record must sync exactly as before: not applicable to
+        failure, and it must not break the run.
+      record: 5002
+      rewrite: { createdAt: yesterday }
+      outcome: UPDATED
+    - why: Same, with a boolean.
+      record: 5005
+      rewrite: { createdAt: true }
+      outcome: UPDATED
+  duplicate_key:
+    why: >-
+      The operator supplies user 5001 twice. The customer is updated once; the repeat finds it
+      in sync and writes nothing: 5 updates in total, 2 unchanged (5008 and the repeat), 2 not
+      syncable, 5 write requests.
+    key: 5001
+    expected_counts: { UPDATED: 5, UNCHANGED: 2, NOT_SYNCABLE: 2 }
+    expected_writes: 5

@@ -366,7 +366,9 @@ def test_o5_transient_faults(h: Harness, name: str) -> None:
         if name == "http_500_on_target":
             h.faults("target", http_500_rate=0.3, seed=7)
         elif name == "http_500_on_source":
-            h.faults("source", http_500_rate=0.3, seed=11)
+            # oracle revision r1 (post-hoc): was http_500_rate=0.3, seed=11, which never fired
+            # on the one list request S1 and S4 make; now the first request is failed for sure
+            h.faults("source", http_500_first_n=1)
         elif name == "http_429_on_target":
             h.faults("target", http_429_rate=0.5, retry_after_seconds=1, seed=3)
         elif name == "malformed_json_on_target":
@@ -396,15 +398,19 @@ def test_o5_transient_faults(h: Harness, name: str) -> None:
             c.ok("latency:state_is_correct", ok, detail)
             c.ok("latency:within_the_time_limit", run.elapsed_s < 58, f"{run.elapsed_s:.1f}s")
         else:
-            injected = [
-                e
-                for e in h.requests("source" if "source" in name else "target")
-                if e["status"] >= 429
-            ]
+            # oracle revision r1 (post-hoc): injection is proven by the mock's fault counter
+            role, counter = {
+                "http_500_on_target": ("target", "http_500"),
+                "http_500_on_source": ("source", "http_500"),
+                "http_429_on_target": ("target", "http_429"),
+                "malformed_json_on_target": ("target", "malformed_json"),
+            }[name]
+            injected = h.counters(role)[counter]
             c.ok(
                 f"{name}:faults_were_actually_injected",
-                len(injected) > 0 or name == "malformed_json_on_target",
-                "no fault seen; the check proves nothing",
+                injected > 0,
+                f"the {role} mock injected {injected} {counter} faults; the check proves nothing",
+                revision="r1-fix",
             )
             _converges(h, c, name, run)
 
@@ -619,13 +625,22 @@ def test_o7_contract_drift(h: Harness) -> None:
                 ),
                 f"{run.counts}",
             )
+            # oracle revision r1 (post-hoc): the two checks that were here demanded per-record
+            # FAILED(VALIDATION) and a non-fatal run. The plan's O7 is "ends CONTRACT_DRIFT with
+            # zero writes", so they are replaced by safety assertions.
             c.ok(
-                "drifted_target:at_least_one_record_failed",
-                run.counts.get("FAILED", 0) > 0 and run.sandbox.exit_code == 3,
-                f"counts {run.counts}",
+                "drifted_target:ends_with_contract_drift_and_exit_2",
+                run.fatal is not None
+                and run.fatal["category"] == "CONTRACT_DRIFT"
+                and run.sandbox.exit_code == 2,
+                f"{run.fatal}, exit {run.sandbox.exit_code}",
+                revision="r1-fix",
             )
+            written = len(h.writes("target"))
+            reported = run.counts.get("UPDATED", 0) + run.counts.get("CREATED", 0)
             c.ok(
-                "drifted_target:run_does_not_crash",
-                terminated_by_itself(run) and run.fatal is None,
-                f"{run.fatal}",
+                "drifted_target:no_write_beyond_the_records_reported_before_the_drift",
+                written == reported,
+                f"{written} write requests, {reported} records reported as written",
+                revision="r1-fix",
             )

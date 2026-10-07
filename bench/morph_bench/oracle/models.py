@@ -52,6 +52,7 @@ class OracleFixture(_Frozen):
     untouched_after: tuple[str, ...] = ()
     missing_source_key: int | None = None
     reject_target_extra: tuple[dict[str, Any], ...] = ()
+    added_after_first_d_run: dict[str, Any] | None = None
     notes: str = Field(default="", exclude=True)
 
     @property
@@ -78,7 +79,13 @@ def load_fixture(scenario_id: str) -> OracleFixture:
         parent: dict[str, Any] = yaml.safe_load(
             (FIXTURES_DIR / f"{parent_id}.yaml").read_text(encoding="utf-8")
         )
-        for key in ("records", "rejects", "initial_target", "untouched_after"):
+        for key in (
+            "records",
+            "rejects",
+            "initial_target",
+            "untouched_after",
+            "added_after_first_d_run",
+        ):
             raw.setdefault(key, parent.get(key, []))
         raw.setdefault("review_override", parent.get("review_override"))
     return OracleFixture.model_validate(raw)

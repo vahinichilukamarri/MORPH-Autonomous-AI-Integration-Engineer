@@ -6,11 +6,16 @@ O1 to O7 failed.
 """
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import TracebackType
 
-RESULTS_PATH = Path(__file__).resolve().parents[2] / ".cache" / "oracle-results.json"
+# the evaluation script points this elsewhere to keep one result file per unit
+RESULTS_PATH = Path(
+    os.environ.get("MORPH_ORACLE_RESULTS")
+    or Path(__file__).resolve().parents[2] / ".cache" / "oracle-results.json"
+)
 CORRECTNESS_CATEGORIES = ("O1", "O2", "O3", "O4", "O5", "O6", "O7")
 ALL_CATEGORIES = (*CORRECTNESS_CATEGORIES, "O8")
 
@@ -22,6 +27,7 @@ class CheckResult:
     name: str
     passed: bool
     detail: str
+    revision: str = "r0"
 
 
 RESULTS: list[CheckResult] = []
@@ -30,13 +36,16 @@ RESULTS: list[CheckResult] = []
 class Checks:
     """Collect the checks of one test; fail the test at the end listing every failed check."""
 
-    def __init__(self, scenario: str, category: str) -> None:
+    def __init__(self, scenario: str, category: str, revision: str = "r0") -> None:
         self.scenario = scenario
         self.category = category
+        self.revision = revision
         self.failed: list[CheckResult] = []
 
-    def ok(self, name: str, condition: bool, detail: str = "") -> bool:
-        result = CheckResult(self.scenario, self.category, name, bool(condition), detail)
+    def ok(self, name: str, condition: bool, detail: str = "", revision: str | None = None) -> bool:
+        result = CheckResult(
+            self.scenario, self.category, name, bool(condition), detail, revision or self.revision
+        )
         RESULTS.append(result)
         if not result.passed:
             self.failed.append(result)

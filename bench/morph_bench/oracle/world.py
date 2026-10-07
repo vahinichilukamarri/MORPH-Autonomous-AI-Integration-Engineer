@@ -81,7 +81,12 @@ class Harness:
         source_contract: str | None = None,
         target_contract: str | None = None,
     ) -> None:
-        """Reset both systems to a known state and clear faults and request logs."""
+        """Reset both systems to a known state and clear faults and request logs.
+
+        Waits first until neither system has a request in flight, so a request left hanging by
+        an earlier test cannot be logged into this test's window.
+        """
+        self.wait_until_quiet()
         for role, records, contract in (
             ("source", source, source_contract or self.fx.contract),
             ("target", target, target_contract or self.fx.contract),
@@ -90,6 +95,18 @@ class Harness:
             self.admin(role, "PUT", "/__admin/faults", {"contract_version": contract})
             self.admin(role, "PUT", "/__admin/state", {"records": records})
             self.admin(role, "DELETE", "/__admin/requests")
+
+    def counters(self, role: str) -> dict[str, int]:
+        """Faults the mock actually injected since the profile was set, and requests in flight."""
+        counters: dict[str, int] = self.admin(role, "GET", "/__admin/counters")
+        return counters
+
+    def wait_until_quiet(self, timeout_s: float = 90.0) -> None:
+        deadline = time.monotonic() + timeout_s
+        while any(self.counters(role)["in_flight"] for role in ("source", "target")):
+            if time.monotonic() > deadline:
+                raise TimeoutError("a mock still has requests in flight")
+            time.sleep(0.5)
 
     def faults(self, role: str, **profile: Any) -> None:
         current = self.admin(role, "GET", "/__admin/faults")

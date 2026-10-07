@@ -249,3 +249,39 @@ rejects:
       segment: SMB
       created_at: "2024-03-05T10:15:30Z"
     field: fullName
+
+# ---- added after the first D run (oracle revision r1, post-hoc) -----------------------------
+# Three cases the first version did not cover. Expectations are hand-written from the rules
+# above, not taken from what D did. `rewrite` is applied by the source mock to the one record
+# whose key equals `record`, in every successful response that contains it.
+added_after_first_d_run:
+  unknown_enum:
+    why: >-
+      The CRM sends a status the answer key's vocabulary does not contain. That record must fail
+      as a validation problem on accountState; the other records must still sync; no crash.
+    record: C-3001
+    rewrite: { status: ARCHIVED }
+    outcome: FAILED
+    category: VALIDATION
+    field: accountState
+  bad_created_at:
+    - why: A created_at that is a string but not a datetime.
+      record: C-3002
+      rewrite: { created_at: yesterday }
+      outcome: FAILED
+      category: VALIDATION
+      field: createdAt
+    - why: A created_at that is not a string at all (a number).
+      record: C-3003
+      rewrite: { created_at: 1700000000 }
+      outcome: FAILED
+      category: VALIDATION
+      field: createdAt
+  duplicate_key:
+    why: >-
+      The CRM list repeats its first item (C-3001), so the same source key arrives twice in one
+      run. The record must be created once; the repeat must find it already in sync and write
+      nothing: 8 creates in total, 1 unchanged, 8 write requests.
+    key: C-3001
+    expected_counts: { CREATED: 8, UNCHANGED: 1 }
+    expected_writes: 8

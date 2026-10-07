@@ -1,5 +1,6 @@
 """Oracle fixtures: the integration under test (built once per scenario) and ephemeral mocks."""
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -48,6 +49,11 @@ def h(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Iterator[Harness]:
     fixture = load_fixture(request.param)
+    external = os.environ.get("MORPH_ORACLE_BUNDLE")
+    if external:  # grade a bundle built elsewhere (the evaluation script)
+        with MockEnvironment() as mocks:
+            yield Harness(fixture, mocks, Path(external))
+        return
     with Session(test_engine, expire_on_commit=False) as session:
         version, bundle = build_bundle(
             session, fixture, sandbox_runner, tmp_path_factory.mktemp(fixture.scenario) / "bundle"
