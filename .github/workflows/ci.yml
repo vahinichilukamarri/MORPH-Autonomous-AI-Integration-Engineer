@@ -87,6 +87,10 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run pytest -q
+      - name: Show which tests failed
+        if: failure()
+        run: |
+          uv run pytest -q --tb=short -p no:cacheprovider 2>&1 | grep -E "^(FAILED|ERROR|E  )" | head -25 | sed 's/^/::error::/'
 
   frontend:
     runs-on: ubuntu-latest
