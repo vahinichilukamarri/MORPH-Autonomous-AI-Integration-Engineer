@@ -361,3 +361,40 @@ def test_consecutive_server_failures_end_the_run_cleanly() -> None:
     report = run_crm_to_support(FakeCrm(crm_rows(30)), Down())
     assert report.status.value == "FATAL" and report.fatal_category is Category.SERVER
     assert len(report.records) < 30
+
+
+def test_a_missing_required_target_field_is_drift_not_null() -> None:
+    class RenamedPhone(FakeCrm):
+        def send(self, *args: Any) -> Response:
+            response = super().send(*args)
+            return Response(
+                response.status,
+                response.headers,
+                response.body.replace(b'"phone"', b'"phone_number"'),
+            )
+
+    source = SourceSpec(mode=SourceMode.KEYS, key_field="userId", get_path="/users/{id}")
+    target = TargetSpec(
+        mode=TargetMode.CREATE_UPDATE, id_field="customer_id", get_path="/customers/{id}",
+        update_method="PATCH", update_path="/customers/{id}", create_path="/customers",
+        create_fields=("first_name",), update_fields=("first_name", "phone"),
+        id_assigned_by_target=True, response_required=("customer_id", "first_name", "phone"),
+    )  # fmt: skip
+
+    def to_crm(record: Record) -> dict[str, JsonScalar]:
+        return {"customer_id": "C-1", "first_name": "New", "phone": None}
+
+    crm = RenamedPhone([{"customer_id": "C-1", "first_name": "Old", "phone": "+15550000001"}])
+    support = FakeSupport([{"userId": 1, "externalRef": "C-1", "fullName": "A"}])
+    clock = Clock()
+    report = SyncEngine(
+        Strategy(source, target),
+        client("http://support", BearerAuth("t"), support, clock),
+        client("http://crm", ApiKeyAuth("X-API-Key", "k"), crm, clock),
+        to_crm,
+        keys=("1",),
+        clock=clock,
+    ).run()
+    assert report.fatal_category is Category.CONTRACT_DRIFT
+    assert [m for m, _ in crm.log if m in ("PATCH", "POST", "PUT")] == []
+    assert crm.rows["C-1"]["first_name"] == "Old"  # nothing half-applied

@@ -28,5 +28,5 @@ def env_optional(name: str, default: str) -> str:
 
 def make_client(url_var: str, auth: Auth) -> HttpClient:
     """An HTTP client for the system whose base URL is in ``url_var``."""
-    timeout = float(env_optional("MORPH_HTTP_TIMEOUT_S", "10"))
-    return HttpClient(env(url_var), auth, timeout=timeout, policy=RetryPolicy())
+    timeout = float(env_optional("MORPH_HTTP_TIMEOUT_S", "5"))
+    return HttpClient(env(url_var), auth, timeout=timeout, policy=RetryPolicy(total_budget=12.0))

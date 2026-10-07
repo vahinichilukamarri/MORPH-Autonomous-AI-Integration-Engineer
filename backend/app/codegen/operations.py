@@ -68,6 +68,7 @@ class TargetPlan:
     update_fields: tuple[Field, ...]
     id_assigned_by_target: bool
     natural_key: str | None
+    response_required: tuple[str, ...] = ()
     list_path: str = ""
     page_param: str = "page"
     size_param: str = "page_size"
@@ -207,6 +208,7 @@ def _write_fields(
 def _target(model: SystemModel, entity_name: str) -> TargetPlan:
     entity = _entity(model, entity_name)
     names = {f.name for f in entity.fields}
+    required = tuple(f.name for f in entity.fields if f.required)
     getter = _by_id(model, "GET", entity_name)
     if getter is None:
         raise PlanError(
@@ -246,7 +248,7 @@ def _target(model: SystemModel, entity_name: str) -> TargetPlan:
             update_method="PUT", update_path=put[2], create_path="",
             create_entity=entity_name, update_entity=entity_name,
             create_fields=fields, update_fields=fields, id_assigned_by_target=False,
-            natural_key=None, **list_args,  # type: ignore[arg-type]
+            natural_key=None, response_required=required, **list_args,  # type: ignore[arg-type]
         )  # fmt: skip
     update = patch or put
     if create is None or update is None:
@@ -275,7 +277,8 @@ def _target(model: SystemModel, entity_name: str) -> TargetPlan:
         update_method=update[0].method.upper(), update_path=update[2],
         create_path=create.path, create_entity=create_entity, update_entity=update_entity,
         create_fields=create_fields, update_fields=update_fields,
-        id_assigned_by_target=assigned, natural_key=natural, **list_args,  # type: ignore[arg-type]
+        id_assigned_by_target=assigned, natural_key=natural, response_required=required,
+        **list_args,  # type: ignore[arg-type]
     )  # fmt: skip
 
 

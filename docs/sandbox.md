@@ -13,9 +13,19 @@ docker run --read-only --tmpfs /scratch (32 MB, noexec) --tmpfs /tmp (16 MB, noe
   --mount <bundle>:/app/bundle (read-only)  morph-sandbox:dev  python -E -s -B -m integration
 ```
 
-Defaults: 256 MB, 0.5 CPU, 64 processes, 60 s wall clock, 1 MB of captured output. Only
+Defaults: 256 MB, 0.5 CPU, 64 processes, 60 s wall clock. Only
 `MORPH_*` environment variables can be passed in. Nothing else is mounted: no repository, no
 `.env`, no bench, no oracle, no docker socket.
+
+## Output cap
+
+`SandboxLimits.output_cap_bytes = 1_000_000`: at most **1,000,000 bytes (about 1 MB) of stdout
+and, separately, 1,000,000 bytes of stderr** are kept. The first byte past the cap makes the
+runner kill the container and label the run `OUTPUT_LIMIT`; anything already beyond the cap is
+discarded (the pipe keeps being drained so nothing blocks), and `--log-driver none` stops Docker
+from storing the flood. The containment test lowers the cap to 200,000 to run quickly and shows
+that the kept output never exceeds the cap (it kept 196,608 bytes: the whole 64 KiB chunks that
+fit under it).
 
 ## Network
 

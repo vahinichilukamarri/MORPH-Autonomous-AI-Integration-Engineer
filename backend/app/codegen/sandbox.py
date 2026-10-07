@@ -470,7 +470,8 @@ class MockEnvironment:
 
     The sandbox joins the internal network (no gateway, no internet) and reaches the mocks as
     ``crm`` and ``support``. The mocks also publish loopback ports so trusted host code can seed
-    state and read the request log through ``/__admin``. The admin tokens never enter the sandbox.
+    state and read the request log through the admin interface. The admin tokens never enter
+    the sandbox.
     """
 
     def __init__(self, run_id: str | None = None) -> None:
@@ -500,6 +501,41 @@ class MockEnvironment:
             "MORPH_SUPPORT_URL": f"http://support:{SUPPORT_PORT}",
             "MORPH_SUPPORT_TOKEN": self.support_token,
         }
+
+    def credential(self, system: str) -> str:
+        return self.crm_key if system == "crm" else self.support_token
+
+    def role_env(
+        self,
+        source: str,
+        target: str,
+        *,
+        source_credential: str | None = None,
+        target_credential: str | None = None,
+    ) -> dict[str, str]:
+        """Environment for a generated integration: ``source`` and ``target`` are system names.
+
+        A credential of ``""`` leaves that variable out entirely (to test missing credentials).
+        """
+        port = {"crm": CRM_PORT, "support": SUPPORT_PORT}
+        env = {
+            "MORPH_SOURCE_URL": f"http://{source}:{port[source]}",
+            "MORPH_TARGET_URL": f"http://{target}:{port[target]}",
+        }
+        for role, system, override in (
+            ("SOURCE", source, source_credential),
+            ("TARGET", target, target_credential),
+        ):
+            value = self.credential(system) if override is None else override
+            if value:
+                env[f"MORPH_{role}_CREDENTIAL"] = value
+        return env
+
+    def admin_url(self, system: str) -> str:
+        return self.crm_admin_url if system == "crm" else self.support_admin_url
+
+    def admin_token(self, system: str) -> str:
+        return self.crm_admin_token if system == "crm" else self.support_admin_token
 
     def __enter__(self) -> "MockEnvironment":
         try:

@@ -12,6 +12,7 @@ import json
 import os
 import random
 import secrets
+import time
 from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -280,6 +281,7 @@ class RequestLogEntry(BaseModel):
     path: str
     query: str
     status: int
+    at: float
     auth_header: Literal["x-api-key", "authorization", "none"]
 
 
@@ -337,6 +339,7 @@ class RequestLogMiddleware:
                     "path": path,
                     "query": scope.get("query_string", b"").decode("latin-1"),
                     "status": status,
+                    "at": time.time(),
                     "auth_header": auth,
                 }
             )

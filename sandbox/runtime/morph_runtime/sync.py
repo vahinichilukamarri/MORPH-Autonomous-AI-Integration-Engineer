@@ -30,7 +30,7 @@ from morph_runtime.report import Outcome, RecordResult, RunReport
 from morph_runtime.retry import Clock, SystemClock
 
 CONSECUTIVE_FAILURE_LIMIT = 8
-DEFAULT_RUN_BUDGET_S = 50.0
+DEFAULT_RUN_BUDGET_S = 40.0
 _AMBIGUOUS = frozenset({Category.SERVER, Category.TIMEOUT, Category.MALFORMED_RESPONSE})
 _TRANSIENT = frozenset(
     {
@@ -78,6 +78,7 @@ class TargetSpec:
     update_fields: tuple[str, ...] = ()  # writable on update
     create_only: tuple[str, ...] = ()  # sent on create, never on update (constants)
     omit_if_null: tuple[str, ...] = ()  # optional, non-nullable fields: omitted when null
+    response_required: tuple[str, ...] = ()  # fields every target record must contain
     natural_key: str | None = None  # fallback identity when the id is assigned by the target
     id_assigned_by_target: bool = False
     list_path: str = ""  # target list operation, used to index the natural key
@@ -262,6 +263,14 @@ class SyncEngine:
             raise RuntimeFailure(Category.MALFORMED_RESPONSE, "target record is not an object")
         return found
 
+    def _require_shape(self, existing: Mapping[str, Any], fields: tuple[str, ...]) -> None:
+        """A required field that is absent (not null) means the target's contract has changed."""
+        absent = [
+            f for f in fields if f in self.strategy.target.response_required and f not in existing
+        ]
+        if absent:
+            raise _Fatal(Category.CONTRACT_DRIFT, f"target record has no field {absent[0]!r}")
+
     def _body(self, mapped: Mapping[str, JsonScalar], fields: tuple[str, ...]) -> dict[str, Any]:
         spec = self.strategy.target
         return {
@@ -277,6 +286,8 @@ class SyncEngine:
             return Outcome.NOT_SYNCABLE, "mapped target id is null"
         existing = self._get(identity)
         body = self._body(mapped, spec.update_fields)
+        if existing is not None:
+            self._require_shape(existing, tuple(body))
         if existing is not None and _same(existing, body):
             return Outcome.UNCHANGED, ""
         self.target.request(spec.update_method, _path(spec.update_path, identity), body=body)
@@ -301,6 +312,7 @@ class SyncEngine:
             self._create(mapped)
             return Outcome.CREATED, ""
         eid = existing.get(spec.id_field, identity)
+        self._require_shape(existing, spec.update_fields)
         changes = {
             f: v
             for f, v in self._body(mapped, spec.update_fields).items()

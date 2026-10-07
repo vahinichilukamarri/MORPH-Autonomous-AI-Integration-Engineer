@@ -121,6 +121,7 @@ def derive_strategy(
             "update_fields": update_fields,
             "create_only": create_only,
             "omit_if_null": omit_if_null,
+            "response_required": t.response_required,
             "natural_key": t.natural_key,
             "id_assigned_by_target": t.id_assigned_by_target,
             "list_path": t.list_path,
