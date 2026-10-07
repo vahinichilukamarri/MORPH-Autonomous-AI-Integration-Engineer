@@ -30,6 +30,14 @@ class _Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+class RecordRewrite(_Frozen):
+    """Overwrite fields of the one JSON object whose ``match_key`` equals ``match_value``."""
+
+    match_key: str
+    match_value: Any
+    set: dict[str, Any]
+
+
 class FaultProfile(_Frozen):
     """Mirror of the mock systems' ``/__admin/faults`` body (a test keeps the two in sync)."""
 
@@ -38,6 +46,10 @@ class FaultProfile(_Frozen):
     http_429_rate: float = Field(default=0.0, ge=0, le=1)
     retry_after_seconds: int = Field(default=1, ge=0)
     malformed_json_rate: float = Field(default=0.0, ge=0, le=1)
+    http_500_first_n: int = Field(default=0, ge=0)
+    malformed_json_first_n: int = Field(default=0, ge=0)
+    rewrite_records: tuple[RecordRewrite, ...] = ()
+    duplicate_first_list_item: bool = False
     latency_ms: int = Field(default=0, ge=0, le=60_000)
     timeout: bool = False
     timeout_seconds: float = Field(default=30.0, ge=0, le=300)

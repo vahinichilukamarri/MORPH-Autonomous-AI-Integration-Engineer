@@ -52,3 +52,13 @@ Not part of the public OpenAPI document, so discovery and mapping never see it.
 | `GET /__admin/state` | dump all records of the system |
 | `PUT /__admin/state` | replace all records (`{"records": [...]}`), validated; `422` leaves state unchanged |
 | `GET/DELETE /__admin/requests` | request log: method, path, query, status and which auth header was present (never its value) |
+
+### Deterministic fault modes and counters
+
+Besides the seeded rates, a profile can fail the **first N requests** after it is set
+(`http_500_first_n`, `malformed_json_first_n`), overwrite fields of one matching object in
+successful responses (`rewrite_records`: `match_key`, `match_value`, `set`) and repeat the first
+item of list responses (`duplicate_first_list_item`). `GET /__admin/counters` reports the faults
+actually injected since the profile was set (`http_500`, `http_429`, `malformed_json`, `requests`)
+and the number of requests still `in_flight`, so a test can prove a fault happened and wait for
+quiet.

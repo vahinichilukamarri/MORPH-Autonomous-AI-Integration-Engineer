@@ -71,6 +71,31 @@
           "title": "Malformed Json Rate",
           "type": "number"
         },
+        "http_500_first_n": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Http 500 First N",
+          "type": "integer"
+        },
+        "malformed_json_first_n": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Malformed Json First N",
+          "type": "integer"
+        },
+        "rewrite_records": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RecordRewrite"
+          },
+          "title": "Rewrite Records",
+          "type": "array"
+        },
+        "duplicate_first_list_item": {
+          "default": false,
+          "title": "Duplicate First List Item",
+          "type": "boolean"
+        },
         "latency_ms": {
           "default": 0,
           "maximum": 60000,
@@ -109,6 +134,31 @@
         }
       },
       "title": "FaultProfile",
+      "type": "object"
+    },
+    "RecordRewrite": {
+      "additionalProperties": false,
+      "description": "Overwrite fields of the one JSON object whose ``match_key`` equals ``match_value``.",
+      "properties": {
+        "match_key": {
+          "title": "Match Key",
+          "type": "string"
+        },
+        "match_value": {
+          "title": "Match Value"
+        },
+        "set": {
+          "additionalProperties": true,
+          "title": "Set",
+          "type": "object"
+        }
+      },
+      "required": [
+        "match_key",
+        "match_value",
+        "set"
+      ],
+      "title": "RecordRewrite",
       "type": "object"
     }
   },

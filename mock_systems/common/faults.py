@@ -30,6 +30,16 @@ ErrorBodyFactory = Callable[[int, str], dict[str, Any]]
 MAX_LOGGED_REQUESTS = 20_000
 
 
+class RecordRewrite(BaseModel):
+    """Overwrite fields of the one JSON object whose ``match_key`` equals ``match_value``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    match_key: str
+    match_value: Any
+    set: dict[str, Any]
+
+
 class FaultProfile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -39,6 +49,19 @@ class FaultProfile(BaseModel):
     retry_after_seconds: int = Field(default=1, ge=0, description="Retry-After on 429 responses.")
     malformed_json_rate: float = Field(
         default=0.0, ge=0, le=1, description="Share of requests whose response body is truncated."
+    )
+    http_500_first_n: int = Field(
+        default=0, ge=0, description="The first N requests after the profile is set -> 500."
+    )
+    malformed_json_first_n: int = Field(
+        default=0, ge=0, description="The first N requests -> truncated response body."
+    )
+    rewrite_records: list[RecordRewrite] = Field(
+        default_factory=list,
+        description="Overwrite fields of matching objects in successful responses.",
+    )
+    duplicate_first_list_item: bool = Field(
+        default=False, description="List responses repeat their first item at the end."
     )
     latency_ms: int = Field(default=0, ge=0, le=60_000, description="Fixed delay on every request.")
     timeout: bool = Field(default=False, description="Hold every request for timeout_seconds.")
@@ -70,10 +93,13 @@ class FaultController:
     def __init__(self) -> None:
         self.profile = FaultProfile()
         self._rng = random.Random(self.profile.seed)
+        self.counters: dict[str, int] = {}
+        self.set_profile(self.profile)
 
     def set_profile(self, profile: FaultProfile) -> None:
         self.profile = profile
         self._rng = random.Random(profile.seed)
+        self.counters = {"requests": 0, "http_500": 0, "http_429": 0, "malformed_json": 0}
 
     def clear(self) -> None:
         self.set_profile(FaultProfile())
@@ -81,13 +107,21 @@ class FaultController:
     def decide(self) -> Decision:
         draw = self._rng.random()
         p = self.profile
+        index = self.counters["requests"]
+        self.counters["requests"] += 1
         outcome: Outcome = "ok"
-        if draw < p.http_500_rate:
+        if index < p.http_500_first_n:
+            outcome = "http_500"
+        elif index < p.malformed_json_first_n:
+            outcome = "malformed_json"
+        elif draw < p.http_500_rate:
             outcome = "http_500"
         elif draw < p.http_500_rate + p.http_429_rate:
             outcome = "http_429"
         elif draw < p.http_500_rate + p.http_429_rate + p.malformed_json_rate:
             outcome = "malformed_json"
+        if outcome != "ok":
+            self.counters[outcome] += 1
         return Decision(profile=p, outcome=outcome)
 
 
@@ -109,6 +143,26 @@ def _drop(value: Any, names: set[str]) -> Any:
         return {k: _drop(v, names) for k, v in value.items() if k not in names}
     if isinstance(value, list):
         return [_drop(item, names) for item in value]
+    return value
+
+
+def _apply_rewrites(value: Any, rewrites: list[RecordRewrite]) -> Any:
+    if isinstance(value, dict):
+        out = {k: _apply_rewrites(v, rewrites) for k, v in value.items()}
+        for rewrite in rewrites:
+            if out.get(rewrite.match_key) == rewrite.match_value:
+                out.update(rewrite.set)
+        return out
+    if isinstance(value, list):
+        return [_apply_rewrites(item, rewrites) for item in value]
+    return value
+
+
+def _repeat_first_item(value: Any) -> Any:
+    if isinstance(value, dict):
+        items = value.get("items")
+        if isinstance(items, list) and items:
+            return {**value, "items": [*items, items[0]]}
     return value
 
 
@@ -251,6 +305,10 @@ class FaultMiddleware:
                         parsed = _rename(parsed, self.v1_to_v2)
                     if profile.drop_fields and status < 300:
                         parsed = _drop(parsed, set(profile.drop_fields))
+                    if status < 300 and profile.rewrite_records:
+                        parsed = _apply_rewrites(parsed, profile.rewrite_records)
+                    if status < 300 and profile.duplicate_first_list_item:
+                        parsed = _repeat_first_item(parsed)
                     body = json.dumps(parsed).encode()
             if decision.outcome == "malformed_json":
                 body = body[: max(1, len(body) // 2)]
@@ -294,6 +352,7 @@ class RequestLog:
     def __init__(self) -> None:
         self.entries: list[RequestLogEntry] = []
         self._seq = 0
+        self.in_flight = 0
 
     def clear(self) -> None:
         self.entries = []
@@ -323,6 +382,7 @@ class RequestLogMiddleware:
         elif b"authorization" in names:
             auth = "authorization"
         status = 0
+        self.log.in_flight += 1
 
         async def recording(message: Message) -> None:
             nonlocal status
@@ -333,6 +393,7 @@ class RequestLogMiddleware:
         try:
             await self.app(scope, receive, recording)
         finally:
+            self.log.in_flight -= 1
             self.log.add(
                 {
                     "method": str(scope["method"]),
@@ -397,6 +458,11 @@ def _build_admin_app(
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         return StateDocument(records=dump_state())
+
+    @admin.get("/counters")
+    def get_counters() -> dict[str, int]:
+        """Faults actually injected since the profile was set, and requests still in flight."""
+        return {**controller.counters, "in_flight": log.in_flight}
 
     @admin.get("/requests")
     def get_requests() -> list[RequestLogEntry]:
