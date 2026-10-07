@@ -323,7 +323,9 @@ real network calls, so use a fresh store directory:
 ```
 
 Fixtures land in `bench/replays/`. CI replays scenario 1 in `full_schema` mode (the RAG replay
-depends on real embeddings and is checked locally).
+depends on real embeddings and is checked locally). The replay test also compares the result with
+`bench/replays/crm_customer_to_support_user.expected.json`, which holds the per-field outcome of
+the recorded real run; regenerate it from the new run's saved results together with the fixtures.
 
 ### Frozen before the first real run
 
@@ -331,3 +333,8 @@ Prompt templates v1 and the confidence constants are frozen (a test enforces it)
 after the first real run is prompt v2 or confidence formula v2 and appears in
 `docs/mapping-eval.md` as a separate labelled run set.
 
+### Recorded results
+
+The first real run (N=1, prompt v1 / confidence-v1, `openai/gpt-oss-120b` on Groq) is in
+`docs/mapping-eval.md`. It is generated from the saved run results; read it there rather than
+here. The scenario 1 responses of that run are the replay fixtures CI uses.
