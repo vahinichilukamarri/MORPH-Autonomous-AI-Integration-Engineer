@@ -123,17 +123,21 @@ change and therefore a new, separately labelled run (`codegen-v2`), not a retune
   `milestones.md`.
 * As-proposed units are rebuilt from saved v0.3 responses (no model call), validator v1.
 * **Saved results were edited after the run (model label).** The first saved results recorded
-  the model as `groq` for the six L1 and L2 units. That came from the harness, which read the
+  the model as `groq` for the L1 and L2 rows. That came from the harness, which read the
   model name off the provider wrapper that has no such attribute, not from the replies. I edited
   `bench/.cache/codegen-eval/real/results.jsonl` by hand: **old value `groq`, new value
-  `openai/gpt-oss-120b`**, in the `model` field of those six rows. Evidence: the `model` field of
+  `openai/gpt-oss-120b`**, in the `model` field of the L1 and L2 rows. **Correction (2026-10-08):** the file holds 12 such
+  rows (6 approved and 6 as-proposed), all carrying the new value; an earlier version of this note
+  said six. The pre-edit file was not kept, so which rows read `groq` before the edit cannot be
+  re-checked. The committed copy and its declared edit are in
+  `bench/results/codegen-v0.4/provenance.json`. Evidence: the `model` field of
   all 9 recorded replies is `openai/gpt-oss-120b` (the Groq response's own `model`, in
   `bench/replays/codegen/calls.jsonl`, checked by a test). The results file is git-ignored, so the
   edit itself has no commit; its file time is 2026-10-07 21:51 (local). The commits that first
   published its effect are `e3b13b6` (harness label code, which then read the configured model
   rather than the reply) and `7bfdd39` (the report and these findings). **Fix (this revision):**
   `UnitResult.response_model` is now filled from the model id the provider reported in the
-  replies (saved call rows), the report prefers it, and a replay test checks it. The old six rows
+  replies (saved call rows), the report prefers it, and a replay test checks it. The old rows
   have no `response_model`; the report shows their edited `model`.
 
 ## Failure attribution

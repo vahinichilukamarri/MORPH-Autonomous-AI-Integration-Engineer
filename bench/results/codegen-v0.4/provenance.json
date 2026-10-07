@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "milestone": "v0.4-codegen",
+  "description": "Provenance of the committed v0.4 code-generation evaluation results. Added after the fact (2026-10-08); the results themselves were produced on 2026-10-07.",
+  "run": {
+    "date": "2026-10-07",
+    "real_model_calls_window_local": "21:42 to 21:48 (+05:30)",
+    "provider": "groq",
+    "model_reported_by_replies": "openai/gpt-oss-120b",
+    "settings": "low reasoning effort, temperature 0, at most 4000 output tokens",
+    "harness_commit": "fcd86ff (last commit before the run: 2026-10-07 20:07 +05:30)",
+    "conditions": [
+      "D",
+      "L1",
+      "L2"
+    ],
+    "input_sets": [
+      "approved",
+      "as_proposed"
+    ],
+    "units": 18
+  },
+  "files": {
+    "results.jsonl": {
+      "sha256": "6f5854d5c4b094190a7dbef33b5b32ab38ee1015e3f171b48aba345174a115ce",
+      "origin": "copy of bench/.cache/codegen-eval/real/results.jsonl, byte for byte, as it stood at commit time",
+      "units": 18
+    },
+    "oracle-summary.json": {
+      "sha256": "355fc51cb3bc7b0ca5af88f0983959f0725737df512d24cc24f8e23f78350ae8",
+      "origin": "derived from bench/.cache/oracle-results.json (413 checks)"
+    },
+    "hash_note": "sha256 of the file with LF line endings, as stored in git"
+  },
+  "not_recorded_in_v0.4": [
+    "total_tokens",
+    "the provider usage block (reasoning-token accounting is therefore unverified for v0.4)"
+  ],
+  "post_run_edits": [
+    {
+      "file": "results.jsonl",
+      "when": "2026-10-07, file modification time 21:51 +05:30, after the last model call (21:48) and before the report was generated",
+      "what": "model field of the L1 and L2 rows",
+      "old_value": "groq",
+      "new_value": "openai/gpt-oss-120b",
+      "rows_now_carrying_the_new_value": 12,
+      "scope_note": "All 12 L1/L2 rows in the file carry the new value (6 approved, 6 as_proposed). The earlier disclosure in codegen-eval-findings.md said six rows. The pre-edit file was not kept, so which rows read 'groq' before the edit cannot be re-checked; the same label code wrote all 12.",
+      "evidence": "the model field of all 9 recorded replies is openai/gpt-oss-120b (bench/replays/codegen/calls.jsonl); the six rows with real calls are covered by those replies",
+      "made_by": "manual edit by the operator of the run",
+      "commits_that_first_published_its_effect": [
+        "e3b13b6 (harness label code)",
+        "7bfdd39 (report and findings)"
+      ],
+      "fixed_in_code_by": "ef8b5a9 (response_model recorded from the replies)"
+    }
+  ]
+}

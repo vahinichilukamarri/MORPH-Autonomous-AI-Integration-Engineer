@@ -1,0 +1,117 @@
+{
+  "by_scenario": {
+    "crm_customer_to_support_user": {
+      "O1": {
+        "passed": 18,
+        "total": 18
+      },
+      "O2": {
+        "passed": 19,
+        "total": 19
+      },
+      "O3": {
+        "passed": 11,
+        "total": 11
+      },
+      "O4": {
+        "passed": 20,
+        "total": 20
+      },
+      "O5": {
+        "passed": 29,
+        "total": 29
+      },
+      "O6": {
+        "passed": 37,
+        "total": 37
+      },
+      "O7": {
+        "passed": 5,
+        "total": 5
+      },
+      "O8": {
+        "passed": 4,
+        "total": 4
+      }
+    },
+    "crm_v2_to_support_v2": {
+      "O1": {
+        "passed": 18,
+        "total": 18
+      },
+      "O2": {
+        "passed": 19,
+        "total": 19
+      },
+      "O3": {
+        "passed": 11,
+        "total": 11
+      },
+      "O4": {
+        "passed": 20,
+        "total": 20
+      },
+      "O5": {
+        "passed": 29,
+        "total": 29
+      },
+      "O6": {
+        "passed": 37,
+        "total": 37
+      },
+      "O7": {
+        "passed": 5,
+        "total": 5
+      },
+      "O8": {
+        "passed": 4,
+        "total": 4
+      }
+    },
+    "support_user_to_crm_customer": {
+      "O1": {
+        "passed": 17,
+        "total": 17
+      },
+      "O2": {
+        "passed": 19,
+        "total": 19
+      },
+      "O3": {
+        "passed": 11,
+        "total": 11
+      },
+      "O4": {
+        "passed": 9,
+        "total": 9
+      },
+      "O5": {
+        "passed": 29,
+        "total": 29
+      },
+      "O6": {
+        "passed": 33,
+        "total": 33
+      },
+      "O7": {
+        "passed": 5,
+        "total": 5
+      },
+      "O8": {
+        "passed": 4,
+        "total": 4
+      }
+    }
+  },
+  "checks_by_revision": {
+    "r0": 301,
+    "r1-fix": 14,
+    "r1-new": 98
+  },
+  "description": "Condition D against the oracle, approved mappings, one complete run: counts only. The per-check file (413 entries with detail strings) stays local; its hash is recorded here.",
+  "failed_checks": [],
+  "oracle_revision": "r1 (post-hoc, see docs/milestones.md)",
+  "source_checks": 413,
+  "source_file": "bench/.cache/oracle-results.json (not committed)",
+  "source_sha256": "52bb2a2a4f391b166153fd2ca98524d61d4da9ff388023d977eaa07bd471aa93"
+}
