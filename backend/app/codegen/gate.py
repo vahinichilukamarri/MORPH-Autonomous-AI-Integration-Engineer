@@ -44,6 +44,9 @@ ALLOWED_DECORATORS = frozenset({"dataclass"})
 MAX_FILES = 24
 MAX_FILE_LINES = 1500
 MAX_TOTAL_LINES = 4000
+_SUPPRESSION = re.compile(
+    r"#\s*(?:noqa|type:\s*ignore|mypy:|ruff:|fmt:\s*skip|pragma)", re.IGNORECASE
+)
 _URL = re.compile(r"(?i)\b[a-z][a-z0-9+.\-]*://|\bwww\.")
 _SECRET = re.compile(
     r"(?i)\bbearer\s+\S{8,}|\b(?:sk|gsk|ghp|xox[a-z])[-_][A-Za-z0-9]{10,}|[A-Za-z0-9+/=_\-]{40,}"
@@ -64,6 +67,10 @@ class Rule(StrEnum):
     SECRET_LITERAL = "SECRET_LITERAL"
     ASYNC = "ASYNC"
     GLOBAL_STATEMENT = "GLOBAL_STATEMENT"
+    SUPPRESSION = "SUPPRESSION"
+    LINT = "LINT"
+    TYPE_ERROR = "TYPE_ERROR"
+    TOOL_FAILURE = "TOOL_FAILURE"
 
 
 @dataclass(frozen=True)
@@ -241,6 +248,11 @@ def check_ast(files: Mapping[str, str]) -> GateResult:
                 Finding(path, getattr(error, "lineno", 0) or 0, Rule.SYNTAX, str(error))
             )
             continue
+        for number, line in enumerate(source.splitlines(), start=1):
+            if _SUPPRESSION.search(line):
+                findings.append(
+                    Finding(path, number, Rule.SUPPRESSION, "lint and type suppression comments")
+                )
         checker = _Checker(path, local)
         checker.visit(tree)
         findings.extend(checker.findings)

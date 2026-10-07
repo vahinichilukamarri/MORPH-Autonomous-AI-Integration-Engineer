@@ -52,5 +52,12 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [".", "../sandbox/runtime"]
-addopts = "-m 'not slow'"
-markers = ["slow: needs the real embedding model (downloads it); run with `pytest -m slow`"]
+addopts = "-m 'not slow and not docker'"
+markers = [
+    "slow: needs the real embedding model (downloads it); run with `pytest -m slow`",
+    "docker: needs Docker and the sandbox/mock images; run with `pytest -m docker`",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/codegen/test_containment.py" = ["E501"]
+"tests/codegen/test_gate.py" = ["E501"]

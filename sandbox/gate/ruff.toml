@@ -1,0 +1,9 @@
+# Applied to generated code by the static gate. Lives outside the bundle so generated code
+# cannot weaken it.
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "B", "UP", "S"]
+# Generated lines can be long (regular expressions, enum tables), so E501 is not enforced.
+ignore = ["E501"]
