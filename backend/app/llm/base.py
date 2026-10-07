@@ -90,6 +90,8 @@ class CallMetadata:
     input_tokens: int | None
     output_tokens: int | None
     reasoning_tokens: int | None = None
+    total_tokens: int | None = None
+    usage: dict[str, Any] | None = None  # the provider's own usage block, unmodified
     outcome: Outcome = Outcome.OK
     source: Source = "network"
     http_attempts: int = 1
@@ -156,15 +158,19 @@ class BaseLLMProvider(ABC):
         response_model: type[T],
         *,
         validate: Callable[[T], object] | None = None,
+        reask: bool = True,
     ) -> StructuredResult[T]:
         """Parse the reply into ``response_model``; on invalid output re-ask exactly once.
+
+        ``reask=False`` makes the call a single provider call: an invalid reply is returned as a
+        failed result and the caller decides what happens next (the repair loop does).
 
         ``validate`` may raise ValueError for semantic problems the schema cannot express; its
         message is fed back in the re-ask like a schema error.
         """
         attempts: list[Attempt] = []
         current = request
-        for attempt_number in (1, 2):
+        for attempt_number in (1, 2) if reask else (1,):
             raw = self.complete_raw(current, response_model)
             error: str | None = None
             value: T | None = None

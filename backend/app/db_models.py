@@ -244,6 +244,8 @@ class LLMCall(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer)
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     reasoning_tokens: Mapped[int | None] = mapped_column(Integer)
+    total_tokens: Mapped[int | None] = mapped_column(Integer)
+    usage: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     latency_ms: Mapped[int] = mapped_column(Integer)
     outcome: Mapped[str] = mapped_column(String(16))
     source: Mapped[str] = mapped_column(String(16))

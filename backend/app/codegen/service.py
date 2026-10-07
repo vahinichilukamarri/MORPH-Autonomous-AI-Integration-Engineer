@@ -136,6 +136,8 @@ def _persist(
                 input_tokens=meta.input_tokens,
                 output_tokens=meta.output_tokens,
                 reasoning_tokens=meta.reasoning_tokens,
+                total_tokens=meta.total_tokens,
+                usage=meta.usage,
                 latency_ms=meta.latency_ms,
                 outcome=meta.outcome.value,
                 source=meta.source,

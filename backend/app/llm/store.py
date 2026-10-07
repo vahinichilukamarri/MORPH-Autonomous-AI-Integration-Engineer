@@ -11,6 +11,7 @@ Records hold the raw reply and token counts, never prompts, headers or keys.
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -33,6 +34,8 @@ class Recorded:
     output_tokens: int | None
     reasoning_tokens: int | None
     latency_ms: int
+    total_tokens: int | None = None
+    usage: dict[str, Any] | None = None
 
 
 class ResponseStore:
@@ -77,6 +80,8 @@ def _completion(record: Recorded, source: str) -> RawCompletion:
         input_tokens=record.input_tokens,
         output_tokens=record.output_tokens,
         reasoning_tokens=record.reasoning_tokens,
+        total_tokens=record.total_tokens,
+        usage=record.usage,
         source=source,  # type: ignore[arg-type]
     )
     return RawCompletion(text=record.text, metadata=metadata)
@@ -135,6 +140,8 @@ class CachingProvider(BaseLLMProvider):
                 output_tokens=meta.output_tokens,
                 reasoning_tokens=meta.reasoning_tokens,
                 latency_ms=meta.latency_ms,
+                total_tokens=meta.total_tokens,
+                usage=meta.usage,
             ),
             file=self._record_file,
         )

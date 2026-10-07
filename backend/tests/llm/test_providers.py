@@ -453,3 +453,60 @@ def test_local_validation_still_keeps_integers_as_integers() -> None:
 
     pair = EnumPair.model_validate({"source": "A", "target": 5})
     assert pair.target == 5 and isinstance(pair.target, int) and not isinstance(pair.target, bool)
+
+
+# ---- reask switch and the full usage block -----------------------------------------------------
+
+
+def test_reask_false_is_one_call_and_a_recorded_failure() -> None:
+    provider = ScriptedFakeProvider(replies=["not json at all", GOOD])
+    result = provider.complete_structured(REQUEST, Answer, reask=False)
+    assert result.value is None and result.outcome is Outcome.INVALID_OUTPUT
+    assert len(result.attempts) == 1 and len(provider.calls) == 1, "no second call"
+    assert result.final_error is not None
+
+
+def test_reask_defaults_to_the_v04_behaviour() -> None:
+    provider = ScriptedFakeProvider(replies=["nope", GOOD])
+    assert provider.complete_structured(REQUEST, Answer).value is not None
+    assert len(provider.calls) == 2
+
+
+def test_groq_keeps_the_whole_usage_block_and_total_tokens() -> None:
+    block: dict[str, Any] = {
+        "prompt_tokens": 120,
+        "completion_tokens": 40,
+        "total_tokens": 160,
+        "completion_tokens_details": {"reasoning_tokens": 25},
+        "queue_time": 0.01,
+    }
+    rec = Recorder(lambda n, r: chat_response(GOOD, **block), ("openai/gpt-oss-120b",))
+    meta = rec.provider().complete_structured(REQUEST, Answer).attempts[0].metadata
+    assert meta.usage == block and meta.total_tokens == 160
+
+
+def test_usage_survives_the_record_cache_and_replay_round_trip(tmp_path: Path) -> None:
+    block: dict[str, Any] = {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
+    rec = Recorder(lambda n, r: chat_response(GOOD, **block), ("openai/gpt-oss-120b",))
+    cache = CachingProvider(
+        rec.provider(), ResponseStore(tmp_path), record_file=tmp_path / "r.jsonl"
+    )
+    cache.complete_structured(REQUEST, Answer)
+    replayed = ReplayLLMProvider(ResponseStore(tmp_path / "r.jsonl"))
+    meta = replayed.complete_structured(REQUEST, Answer).attempts[0].metadata
+    assert meta.usage == block and meta.total_tokens == 15
+
+
+def test_records_from_before_the_usage_fields_still_load(tmp_path: Path) -> None:
+    old = {
+        "prompt_hash": REQUEST.fingerprint(Answer), "text": GOOD, "provider": "groq", "model": "m",
+        "input_tokens": 10, "output_tokens": 5, "reasoning_tokens": 2, "latency_ms": 123,
+    }  # fmt: skip
+    (tmp_path / "old.jsonl").write_text(json.dumps(old) + "\n", encoding="utf-8")
+    meta = (
+        ReplayLLMProvider(ResponseStore(tmp_path))
+        .complete_structured(REQUEST, Answer)
+        .attempts[0]
+        .metadata
+    )
+    assert meta.usage is None and meta.total_tokens is None
