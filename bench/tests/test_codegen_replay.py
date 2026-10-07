@@ -6,6 +6,7 @@ this test fails loudly: re-record with a real run and report it as a separate, l
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,12 @@ from morph_bench.oracle.models import load_fixture
 
 REPLAYS = Path(__file__).resolve().parents[1] / "replays" / "codegen"
 EXPECTED = json.loads((REPLAYS / "expected.json").read_text(encoding="utf-8"))
+
+
+def plain(text: str) -> str:
+    return re.sub(r" \([^()]*line \d+\)", "", text)
+
+
 APPROVED = [e for e in EXPECTED if e["input_set"] == "approved"]
 
 
@@ -61,7 +68,8 @@ def test_replayed_unit_reproduces_the_recorded_outcome(
         for g in version.gate_results
         for f in g.findings
     ][:6]
-    assert findings == unit["gate_findings"]
+    # Python writes the file name into a SyntaxError message differently on Windows and Linux
+    assert [plain(f) for f in findings] == [plain(str(f)) for f in unit["gate_findings"]]  # type: ignore[attr-defined]
     info = version.manifest["llm"]
     assert info["calls"] == unit["calls"]
     assert info["input_tokens"] == unit["input_tokens"]
