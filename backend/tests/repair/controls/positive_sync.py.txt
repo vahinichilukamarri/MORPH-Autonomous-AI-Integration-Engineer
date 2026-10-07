@@ -1,0 +1,83 @@
+"""A hand-written, known-good L2-shaped sync module for S1 (customers to users).
+
+Test control only: stored as text, never imported, never shown to a prompt.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from morph_runtime.errors import Category, RuntimeFailure
+from morph_runtime.http import HttpClient
+from morph_runtime.ops import FieldTransformError
+from morph_runtime.paging import paginate
+from morph_runtime.report import Outcome, RecordResult, RunReport
+
+from integration.clients import source_client, target_client
+from integration.transform import to_target
+
+PAGE_SIZE = 100
+
+
+def _fetch_page(client: HttpClient, page: int, size: int) -> tuple[list[dict[str, Any]], int | None]:
+    body = client.request("GET", "/customers", query={"page": page, "page_size": size})
+    total = body.get("total")
+    return list(body["items"]), total if isinstance(total, int) else None
+
+
+def _existing(client: HttpClient, user_id: object) -> dict[str, Any] | None:
+    try:
+        found = client.request("GET", f"/users/{user_id}")
+    except RuntimeFailure as failure:
+        if failure.category is Category.NOT_FOUND:
+            return None
+        raise
+    return found if isinstance(found, dict) else None
+
+
+def _same(existing: dict[str, Any], body: dict[str, Any]) -> bool:
+    return all(existing.get(name) == value for name, value in body.items())
+
+
+def _sync_one(record: dict[str, Any], target: HttpClient, report: RunReport) -> None:
+    key = str(record.get("customer_id"))
+    try:
+        body = dict(to_target(record))
+    except FieldTransformError as error:
+        report.add(
+            RecordResult(key, Outcome.FAILED, Category.VALIDATION, error.detail, (error.field,))
+        )
+        return
+    user_id = body.get("userId")
+    if user_id is None:
+        report.add(RecordResult(key, Outcome.NOT_SYNCABLE, detail="the mapped id is null"))
+        return
+    try:
+        existing = _existing(target, user_id)
+        if existing is not None and _same(existing, body):
+            report.add(RecordResult(key, Outcome.UNCHANGED))
+            return
+        target.request("PUT", f"/users/{user_id}", body=body)
+    except RuntimeFailure as failure:
+        if failure.category is Category.AUTH:
+            raise
+        report.add(
+            RecordResult(key, Outcome.FAILED, failure.category, failure.detail, failure.fields)
+        )
+        return
+    report.add(RecordResult(key, Outcome.CREATED if existing is None else Outcome.UPDATED))
+
+
+def run(keys: tuple[str, ...]) -> RunReport:
+    report = RunReport()
+    source = source_client()
+    target = target_client()
+    try:
+        for record in paginate(
+            lambda page, size: _fetch_page(source, page, size), page_size=PAGE_SIZE
+        ):
+            _sync_one(record, target, report)
+    except RuntimeFailure as failure:
+        report.fail_run(failure.category, failure.detail)
+    report.requests = {"source": source.requests_made, "target": target.requests_made}
+    return report

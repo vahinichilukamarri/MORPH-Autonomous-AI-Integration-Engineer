@@ -1,0 +1,8 @@
+"""Known-bad control: the module never finishes. Test control only; never imported."""
+
+from morph_runtime.report import RunReport
+
+
+def run(keys: tuple[str, ...]) -> RunReport:
+    while True:
+        pass

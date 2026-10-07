@@ -1,0 +1,14 @@
+"""Known-bad control: the report has the wrong shape. Test control only; never imported."""
+
+from morph_runtime.report import RunReport
+
+
+class NotAReport:
+    exit_code = 0
+
+    def to_json(self) -> str:
+        return "[]"
+
+
+def run(keys: tuple[str, ...]) -> RunReport:
+    return NotAReport()  # type: ignore[return-value]

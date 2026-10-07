@@ -1,0 +1,7 @@
+"""Known-bad control: the module raises when it runs. Test control only; never imported."""
+
+from morph_runtime.report import RunReport
+
+
+def run(keys: tuple[str, ...]) -> RunReport:
+    raise ValueError("this module does not work")

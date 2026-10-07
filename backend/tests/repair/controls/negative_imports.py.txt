@@ -1,0 +1,10 @@
+"""Known-bad control: the module cannot be imported. Test control only; never imported."""
+
+from morph_runtime.report import RunReport
+
+from integration.not_a_module import helper
+
+
+def run(keys: tuple[str, ...]) -> RunReport:
+    helper()
+    return RunReport()
