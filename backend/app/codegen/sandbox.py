@@ -13,6 +13,7 @@ verified to be in force inside a real container (``LimitsNotEnforced`` otherwise
 """
 
 import json
+import os
 import secrets
 import subprocess
 import tempfile
@@ -172,6 +173,23 @@ class _Capture:
         return b"".join(self.chunks).decode("utf-8", errors="replace")
 
 
+def make_readable(directory: Path) -> None:
+    """Let the sandbox user (uid 10001) read a bundle that is mounted read-only.
+
+    On a Linux host a temporary directory is private (mode 0700) and the container's non-root
+    user could not even import the code. Directories become 0755 and files 0644; nothing gets
+    write or execute rights it did not need.
+    """
+    if os.name != "posix":
+        return
+    for root, dirs, files in os.walk(directory):
+        os.chmod(root, 0o755)
+        for name in dirs:
+            os.chmod(Path(root) / name, 0o755)
+        for name in files:
+            os.chmod(Path(root) / name, 0o644)
+
+
 class SandboxRunner:
     def __init__(self, image: str = SANDBOX_IMAGE, limits: SandboxLimits | None = None) -> None:
         self.image = image
@@ -205,6 +223,7 @@ class SandboxRunner:
     ) -> SandboxResult:
         run_id = run_id or uuid.uuid4().hex[:12]
         name = f"morph-sbx-{run_id}-{secrets.token_hex(3)}"
+        make_readable(bundle_dir)
         command = self._command(name, run_id, bundle_dir, argv, env or {}, network)
         started = time.monotonic()
         timed_out = False
