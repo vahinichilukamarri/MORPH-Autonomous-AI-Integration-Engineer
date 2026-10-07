@@ -250,10 +250,21 @@ an unbiased estimate; see the v2 section of `docs/mapping-eval.md`.
 
 Why: a nullable target hides a pipeline that returns null for everything, because null is a
 legal value there, so v1 passed it with full confidence. The lossy checks are recorded but do
-not force review (`LOSSY_FORCES_REVIEW` is empty): the measured trade-off is in
-`docs/mapping-eval.md`, and whether to force review for truncation is left as an explicit
-decision. The confidence formula is unchanged (v1); a v2 warning lowers the validation term
-from PASS to WARN like any other warning.
+not force review in validator v2 as first shipped. The confidence formula is unchanged (v1); a
+v2 warning lowers the validation term from PASS to WARN like any other warning.
+
+**Policy v2.1 (post-hoc).** After the v1 results and the v2 rescoring were reviewed, one policy
+decision was made: `LOSSY_TRUNCATION` forces `NEEDS_REVIEW` (`LOSSY_FORCES_REVIEW`), and
+`LOSSY_COLLAPSE` (like the v1 `INFORMATION_LOSS_ENUM`) stays a visible warning that does not
+force review. It is selected with `run_mapping(validator="v2.1")`. This policy was chosen after
+seeing the v1 failures, so its numbers are not an unbiased result; see the v2.1 section of
+`docs/mapping-eval.md`, which compares v1, v2 and v2.1.
+
+**Known limitation, not fixed.** A wrong mapping whose output looks plausible, varied and
+non-null cannot be detected by any deterministic check of its outputs. B's `customer_id`, built
+from `userId`, is the example in the evaluation: it was sent to review in v1 only because the
+model itself listed `externalRef` as a rejected alternative (the ambiguity rule, which also
+lowers confidence), not because of anything in its output. v2 and v2.1 do not change that.
 
 Rescoring saved results never calls a model: `bench/scripts/rescore_v2.py` puts a provider that
 raises under the resumable store, reproduces the v1 outcome from the saved responses, then

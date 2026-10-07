@@ -271,3 +271,76 @@ As shipped, no lossy warning forces review (`LOSSY_FORCES_REVIEW` is empty), bec
 - Two things v2 does not fix: the per-field confidence still comes from the unchanged v1 formula, and v2 never inspects whether a mapping is semantically right, only whether its outputs on the sample records look degenerate.
 
 <!-- v2-post-hoc:end -->
+
+<!-- v2.1-post-hoc:start -->
+
+## Policy v2.1, post-hoc rescoring
+
+> **v2.1, post-hoc, chosen after seeing v1 failures.** The decision below was made after
+> the v1 results and the v2 rescoring above had been reviewed, and it is aimed at a
+> failure that was already known. It is therefore **not an unbiased result**: it shows
+> what the policy would have done to this run, not how it will do on new scenarios.
+> The v1 and v2 sections above are unchanged.
+
+**What changed (policy only, the checks are the same as v2):**
+
+- `LOSSY_TRUNCATION` now forces `NEEDS_REVIEW` (`LOSSY_FORCES_REVIEW`).
+- `LOSSY_COLLAPSE` (and the v1 `INFORMATION_LOSS_ENUM`) stay visible warnings and do **not** force review.
+- Everything else, including the confidence formula (v1), is as in v2.
+
+Rescored on 2026-10-07 from the saved responses of `openai/gpt-oss-120b`: 65 stored responses reused, **0 new LLM calls**; validator v1 reproduced 64/64 outcomes exactly before v2 and v2.1 were applied.
+
+### B: LLM, full schema: v1 versus v2 versus v2.1
+
+| Measure | v1 | v2 | v2.1 |
+|---|---|---|---|
+| Flagged for review | 6/32 (18.8%) | 6/32 (18.8%) | 7/32 (21.9%) |
+| Accuracy of unflagged (auto-accepted) mappings | 25/26 (96.2%) | 25/26 (96.2%) | 25/25 (100.0%) |
+| Accuracy of flagged mappings | 5/6 (83.3%) | 5/6 (83.3%) | 5/7 (71.4%) |
+| Wrong mappings that were auto-accepted | 1/2 (50.0%) | 1/2 (50.0%) | 0/2 (0.0%) |
+| New false positives (correct mappings flagged now, not in v1) | 0 | 0 | 0 |
+| Wrong mappings newly caught (flagged now, not in v1) | 0 | 0 | 1 |
+
+### C: LLM + retrieval (RAG): v1 versus v2 versus v2.1
+
+| Measure | v1 | v2 | v2.1 |
+|---|---|---|---|
+| Flagged for review | 6/32 (18.8%) | 7/32 (21.9%) | 7/32 (21.9%) |
+| Accuracy of unflagged (auto-accepted) mappings | 25/26 (96.2%) | 25/25 (100.0%) | 25/25 (100.0%) |
+| Accuracy of flagged mappings | 4/6 (66.7%) | 4/7 (57.1%) | 4/7 (57.1%) |
+| Wrong mappings that were auto-accepted | 1/3 (33.3%) | 0/3 (0.0%) | 0/3 (0.0%) |
+| New false positives (correct mappings flagged now, not in v1) | 0 | 0 | 0 |
+| Wrong mappings newly caught (flagged now, not in v1) | 0 | 1 | 1 |
+
+### B and C together
+
+| Measure | v1 | v2 | v2.1 |
+|---|---|---|---|
+| Flagged for review | 12/64 (18.8%) | 13/64 (20.3%) | 14/64 (21.9%) |
+| Accuracy of unflagged (auto-accepted) mappings | 50/52 (96.2%) | 50/51 (98.0%) | 50/50 (100.0%) |
+| Accuracy of flagged mappings | 9/12 (75.0%) | 9/13 (69.2%) | 9/14 (64.3%) |
+| Wrong mappings that were auto-accepted | 2/5 (40.0%) | 1/5 (20.0%) | 0/5 (0.0%) |
+| New false positives (correct mappings flagged now, not in v1) | 0 | 0 | 0 |
+| Wrong mappings newly caught (flagged now, not in v1) | 0 | 1 | 2 |
+
+Flagged by v2.1 but not by v2: 1 mapping(s), 1 wrong and 0 correct.
+
+| Scenario / field | Config | Correct? | Proposed | Codes |
+|---|---|---|---|---|
+| `support_user_to_crm_customer` `last_name` | B | no (caught) | TRANSFORMATION [fullName] COPY>SPLIT_PART | LOSSY_TRUNCATION |
+
+### Known limitations (not fixed)
+
+- **B's fabricated `customer_id` is not detectable by any deterministic check of its outputs.** The model built it from `userId` (cast to string, prefixed `C-`), which gives plausible, varied, non-null output that satisfies the target schema, so no validator check on the sample outputs (v1 or v2) can tell it from a genuine id. In v1 it was still sent to review, but not because of its output: the model itself listed `externalRef` among its rejected alternatives, which the v1 ambiguity rule treats as a reason for review and which also lowers the confidence score (0.54). v2 and v2.1 do not change that, and no deterministic fix is known. It is recorded here as a known limitation, not fixed.
+- Wrong mappings with no v2 finding at all in this run, and how they were flagged:
+
+| Scenario / field | Config | v1 validation codes | v1 confidence | Flagged by v1 | Flagged by v2.1 |
+|---|---|---|---|---|---|
+| `crm_customer_to_support_user_nodocs` `externalRef` | C | AMBIGUOUS_RETRIEVAL | 0.54 | yes | yes |
+| `support_user_to_crm_customer` `customer_id` | B | AMBIGUOUS_ALTERNATIVES | 0.54 | yes | yes |
+| `support_user_to_crm_customer` `customer_id` | C | INFORMATION_LOSS_COALESCE, AMBIGUOUS_ALTERNATIVES | 0.51 | yes | yes |
+
+- The sample is 32 fields per configuration at N=1; differences of one or two mappings are within noise.
+- Truncation forcing flags any `SPLIT_PART` that discards user data, including correct ones (the first-token `first_name`); on this run those were already in review.
+
+<!-- v2.1-post-hoc:end -->
