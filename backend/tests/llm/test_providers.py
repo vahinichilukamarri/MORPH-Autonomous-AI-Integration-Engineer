@@ -406,3 +406,50 @@ def test_the_api_key_never_leaks(caplog: pytest.LogCaptureFixture, tmp_path: Pat
     assert rec2.chat_calls[0].headers["authorization"] == f"Bearer {SENTINEL}"
     body = rec2.chat_calls[0].content.decode()
     assert SENTINEL not in body
+
+
+def _walk_any_of(node: Any) -> list[list[Any]]:
+    found: list[list[Any]] = []
+    if isinstance(node, dict):
+        if isinstance(node.get("anyOf"), list):
+            found.append(node["anyOf"])
+        for value in node.values():
+            found.extend(_walk_any_of(value))
+    elif isinstance(node, list):
+        for item in node:
+            found.extend(_walk_any_of(item))
+    return found
+
+
+def test_strictify_collapses_integer_and_number_to_number() -> None:
+    schema = {
+        "anyOf": [{"type": "string"}, {"type": "integer"}, {"type": "number"}, {"type": "null"}]
+    }
+    assert strictify_schema(schema) == {
+        "anyOf": [{"type": "string"}, {"type": "number"}, {"type": "null"}]
+    }
+    only_integer = {"anyOf": [{"type": "integer"}, {"type": "null"}]}
+    assert strictify_schema(only_integer) == only_integer, "integer alone is left alone"
+    nested = {"properties": {"v": {"anyOf": [{"type": "integer"}, {"type": "number"}]}}}
+    assert strictify_schema(nested)["properties"]["v"] == {"anyOf": [{"type": "number"}]}
+
+
+def test_the_real_proposal_schema_never_mixes_integer_and_number() -> None:
+    from app.mapping.proposal import LLMProposal
+
+    original = LLMProposal.model_json_schema()
+    assert any(
+        {"integer", "number"} <= {b.get("type") for b in branches if isinstance(b, dict)}
+        for branches in _walk_any_of(original)
+    ), "the unmodified schema does have the ambiguous union, so this test is meaningful"
+    strict = strictify_schema(original)
+    for branches in _walk_any_of(strict):
+        types = [b.get("type") for b in branches if isinstance(b, dict)]
+        assert not ("integer" in types and "number" in types), branches
+
+
+def test_local_validation_still_keeps_integers_as_integers() -> None:
+    from app.mapping.proposal import EnumPair
+
+    pair = EnumPair.model_validate({"source": "A", "target": 5})
+    assert pair.target == 5 and isinstance(pair.target, int) and not isinstance(pair.target, bool)

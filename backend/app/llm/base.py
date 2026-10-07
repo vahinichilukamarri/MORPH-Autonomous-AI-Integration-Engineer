@@ -201,9 +201,18 @@ def strictify_schema(schema: Any) -> Any:
     """Make a Pydantic JSON schema acceptable to strict structured-output mode.
 
     Every object gets ``additionalProperties: false`` and lists all its properties as required.
+    An ``anyOf`` with both ``integer`` and ``number`` keeps only ``number`` (JSON numbers cover
+    integers, and the provider rejects the pair as ambiguous). Only the schema sent to the
+    provider changes; replies are still validated against the original model, where integers
+    stay integers.
     """
     if isinstance(schema, dict):
         out = {key: strictify_schema(value) for key, value in schema.items()}
+        branches = out.get("anyOf")
+        if isinstance(branches, list):
+            plain = [b.get("type") for b in branches if isinstance(b, dict) and len(b) == 1]
+            if "integer" in plain and "number" in plain:
+                out["anyOf"] = [b for b in branches if b != {"type": "integer"}]
         if out.get("type") == "object" or "properties" in out:
             out["additionalProperties"] = False
             out["required"] = list(out.get("properties", {}))
