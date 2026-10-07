@@ -30,6 +30,14 @@ nothing here is statistically significant.
 | L2 (3 units) | 3 | 0 | 11,961 | 5,158 | 815 | 19,422 ms |
 | Total | 9 | 3 | 38,224 | 11,285 | 2,754 | 36,855 ms |
 
+**Token accounting.** `Output tokens` is the provider's `completion_tokens` and `Reasoning tokens`
+its `completion_tokens_details.reasoning_tokens`; the harness neither adds nor subtracts. Whether
+`completion_tokens` already contains the reasoning tokens is **not verified**: the saved results
+keep no `total_tokens` field to check it against. Under the usual OpenAI-compatible convention it
+does contain them. Totals both ways: input 38,224 + output 11,285 = **49,509** tokens if reasoning
+is included in output, and 49,509 + 2,754 = **52,263** if it is not. The "about 49,500" used
+below is the first reading; the second is 5.6% higher. Neither changes any conclusion.
+
 Rate-limit headers after the last call: 8,000 tokens per minute and 1,000 requests per day
 limits; 991 requests and 3,069 tokens remaining in their windows. Nine requests were used. The
 pacing logic never had to wait and no limit was hit. The key is read from the environment and
@@ -58,8 +66,35 @@ sandbox and the oracle never ran on them.
 | Unit | Gate finding | Cause |
 |---|---|---|
 | S1 | `DUNDER_ACCESS` (line 83) and `SUPPRESSION` (line 97) | The code used `fte.__cause__` to detect a missing source field, and a `# pragma: no cover` comment. **The first is exactly what our own L2 prompt's runtime reference told the model to do** (`check error.__cause__`), while the gate bans dunder attributes: a contradiction in the frozen prompt and gate, found by this run. |
-| S4 | `SYNTAX` (line 177) | A stray closing `}` at the end of the module. |
-| S3 | `SYNTAX` (line 145) | The same stray closing `}`. |
+| S4 | `SYNTAX` (line 177) | A stray closing `}` at the end of the module, **written by the model** (see below). |
+| S3 | `SYNTAX` (line 145) | The same stray closing `}`, also written by the model. |
+
+**The stray `}` is the model's, not our extraction.** The raw reply is a JSON object with a
+`source` string. In the S4 and S3 replies the *value of that string itself* ends with a `}`
+line; the JSON around it is well formed and `json.loads` returns the brace as part of the code.
+Our extraction does no more than read the `source` field, and the S1 reply, parsed by the same
+code, ends cleanly. Last five lines of the model's code string (decoded), S4 then S3:
+
+```text
+        "source": src_client.requests_made,
+        "target": tgt_client.requests_made,
+    }
+    return report
+}
+```
+
+```text
+        "source": src.requests_made,
+        "target": tgt.requests_made,
+    }
+    return report
+}
+```
+
+The raw tail of the S4 reply, as stored, is `...return report
+}"` followed by the closing
+`}` of the JSON object: the brace sits inside the quoted code string. The fixture is
+`bench/replays/codegen/calls.jsonl` (records 6 and 9). Failure attributed to the model.
 
 No banned import, `eval`, `exec`, subprocess, URL or secret was attempted. No wrong-but-plausible
 sync behaviour could be caught by the oracle, because no L2 code ran.
@@ -69,11 +104,11 @@ sync behaviour could be caught by the oracle, because no L2 code ran.
 On approved mappings, condition D produced a ready, gate-passing, oracle-correct integration in
 **3 of 3** scenarios. L1 produced **0 of 3** (two invalid proposals after the one re-ask, one
 gate rejection) and L2 **0 of 3** (all rejected by the AST gate). On this data D is simply
-better: the model-assisted conditions added cost (9 calls, about 49,500 tokens) and no
+better: the model-assisted conditions added cost (9 calls, 49,509 to 52,263 tokens depending on the reasoning accounting above) and no
 integration. The data do not show that a model cannot do this; they show that this model, with
 these frozen prompts, this validator and this gate, did not. Part of the failures trace to our
 own design rather than to the model: the L2 prompt told the model to use a construct the gate
-bans, the L1 validator and prompt disagreed about what `omit_if_null` means, and the gate's
+bans, the L1 `omit_if_null` rule (nullable fields rejected) is a design choice that is debatable, and the gate's
 secret rule flags harmless long identifiers. Fixing any of those is a prompt, validator or gate
 change and therefore a new, separately labelled run (`codegen-v2`), not a retune of this one.
 "D is as good as, or better than, L1 and L2" is the result.
@@ -87,5 +122,58 @@ change and therefore a new, separately labelled run (`codegen-v2`), not a retune
 * **Oracle revision r1** was made after the first D run; every change is listed in
   `milestones.md`.
 * As-proposed units are rebuilt from saved v0.3 responses (no model call), validator v1.
-* The model label in the saved results was corrected from `groq` to the model id
-  `openai/gpt-oss-120b` (present in every recorded reply) before the report was generated.
+* **Saved results were edited after the run (model label).** The first saved results recorded
+  the model as `groq` for the six L1 and L2 units. That came from the harness, which read the
+  model name off the provider wrapper that has no such attribute, not from the replies. I edited
+  `bench/.cache/codegen-eval/real/results.jsonl` by hand: **old value `groq`, new value
+  `openai/gpt-oss-120b`**, in the `model` field of those six rows. Evidence: the `model` field of
+  all 9 recorded replies is `openai/gpt-oss-120b` (the Groq response's own `model`, in
+  `bench/replays/codegen/calls.jsonl`, checked by a test). The results file is git-ignored, so the
+  edit itself has no commit; its file time is 2026-10-07 21:51 (local). The commits that first
+  published its effect are `e3b13b6` (harness label code, which then read the configured model
+  rather than the reply) and `7bfdd39` (the report and these findings). **Fix (this revision):**
+  `UnitResult.response_model` is now filled from the model id the provider reported in the
+  replies (saved call rows), the report prefers it, and a replay test checks it. The old six rows
+  have no `response_model`; the report shows their edited `model`.
+
+## Failure attribution
+
+Who or what each non-READY L1 and L2 outcome is attributed to. Condition D is not a failure case.
+"Debatable" means the attribution is a judgement and not settled.
+
+| Unit | Failure | Attributed to |
+|---|---|---|
+| L1 S1 | `omit_if_null_fields` lists nullable `externalRef`, `phoneNumber` (twice) | Validator rule, **debatable**. The prompt does state the rule ("optional, non-nullable") and the model did not follow it, twice |
+| L1 S4 | the same `omit_if_null` listing; re-ask adds a nonexistent `PATCH /users/{userId}` | Validator rule, **debatable** (first part); model (invented endpoint) |
+| L1 S3 | `SECRET_LITERAL` on a 41-character benign identifier in edge data | **Gate false positive.** Observation only: the proposal also sent `segment` on update, which would overwrite it (a model flaw), but that is not what stopped the unit |
+| L2 S1 | `DUNDER_ACCESS` on `__cause__` | **Our prompt contradiction** (the runtime reference tells the model to check `__cause__`; the gate bans dunders) |
+| L2 S1 | `SUPPRESSION` on `# pragma: no cover` | Model. It would have stopped the unit even with the prompt fixed |
+| L2 S4 | `SYNTAX`, stray `}` inside the model's code string | Model (not the extractor; see above) |
+| L2 S3 | `SYNTAX`, stray `}` inside the model's code string | Model (not the extractor) |
+
+The `omit_if_null` rule rejects any field the target schema marks nullable. Whether a nullable
+field may be dropped when null (so the target keeps its old value) is a semantics question the
+frozen prompt answers one way (it defines `omit_if_null_fields` as optional, non-nullable fields).
+Both the model's non-compliance with that wording and the wording itself are in play, so this is
+**not settled**.
+
+## Oracle totals reconcile
+
+Per-unit O1 to O7 sums in `codegen-eval.md` are S1 139, S4 139, S3 123 = **401**; the 413
+quoted in `milestones.md` is **401 + 12**. The 12 are the O8 (review gate) checks, 4 per
+scenario, 3 scenarios. O8 lives in `test_review_gate.py`, which the standalone oracle run
+executes but this evaluation's per-unit grading does not (it runs the O1 to O7 suites only, so
+the O8 column is `-` and correctness is O1 to O7 anyway). Per-scenario in `milestones.md`:
+143 − 4 = 139 (S1, S4) and 127 − 4 = 123 (S3).
+
+## Known issues (deferred to v0.5, not fixed in v0.4)
+
+1. **L2 prompt/gate contradiction:** the runtime reference tells the model to check
+   `error.__cause__`, which the AST gate rejects as dunder access.
+2. **`SECRET_LITERAL` false positive** on benign identifiers of 40 or more token characters
+   (hit by an edge-case `externalRef` in L1 S3).
+3. **`omit_if_null` rule on nullable fields:** the validator rejects it and the prompt defines
+   the field as non-nullable only; whether that is the right rule is debatable and to be decided
+   before any `codegen-v2` run.
+
+None was changed here: prompts, generator, gate, validator, oracle and fixtures are as frozen.

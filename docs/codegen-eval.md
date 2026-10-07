@@ -76,5 +76,12 @@ quality); **as_proposed** = the real v0.3 proposals with the review gate and no 
 * `not run` in the gate column means an earlier stage failed, so the later stage was never
   executed (a failing gate never lets code run).
 * Every oracle check passed or failed on its own; results are never weighted or combined.
+* The oracle table lists O1 to O7 only: this evaluation runs the O1 to O7 suites against the
+  generated bundle, and O8 (the review gate, `test_review_gate.py`) is not run per unit, so its
+  column is `-`. The 413 checks quoted in `milestones.md` are the standalone oracle run and
+  include 4 O8 checks per scenario (12); the per-unit O1 to O7 sums are 139 + 139 + 123 = 401.
+* Token counts are the provider's own: `Output tok.` is its `completion_tokens` and
+  `Reasoning tok.` its `reasoning_tokens` detail. Whether the former already contains the
+  latter is not verified from the saved data; totals are given both ways in the findings.
 * The reading of these numbers, with what the model proposed and wrote, is in
   `codegen-eval-findings.md`.
