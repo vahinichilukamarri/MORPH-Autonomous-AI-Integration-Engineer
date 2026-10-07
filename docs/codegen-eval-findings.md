@@ -126,19 +126,49 @@ change and therefore a new, separately labelled run (`codegen-v2`), not a retune
   the model as `groq` for the L1 and L2 rows. That came from the harness, which read the
   model name off the provider wrapper that has no such attribute, not from the replies. I edited
   `bench/.cache/codegen-eval/real/results.jsonl` by hand: **old value `groq`, new value
-  `openai/gpt-oss-120b`**, in the `model` field of the L1 and L2 rows. **Correction (2026-10-08):** the file holds 12 such
-  rows (6 approved and 6 as-proposed), all carrying the new value; an earlier version of this note
-  said six. The pre-edit file was not kept, so which rows read `groq` before the edit cannot be
-  re-checked. The committed copy and its declared edit are in
-  `bench/results/codegen-v0.4/provenance.json`. Evidence: the `model` field of
-  all 9 recorded replies is `openai/gpt-oss-120b` (the Groq response's own `model`, in
-  `bench/replays/codegen/calls.jsonl`, checked by a test). The results file is git-ignored, so the
-  edit itself has no commit; its file time is 2026-10-07 21:51 (local). The commits that first
-  published its effect are `e3b13b6` (harness label code, which then read the configured model
-  rather than the reply) and `7bfdd39` (the report and these findings). **Fix (this revision):**
-  `UnitResult.response_model` is now filled from the model id the provider reported in the
-  replies (saved call rows), the report prefers it, and a replay test checks it. The old rows
-  have no `response_model`; the report shows their edited `model`.
+  `openai/gpt-oss-120b`**, in the `model` field of the L1 and L2 rows.
+  **Scope (corrected 2026-10-08):** 12 rows were edited. **Only 6 of them have a reply as evidence**:
+  the 6 approved-input rows, which made the 9 real calls, and the `model` field of all 9 recorded
+  replies is `openai/gpt-oss-120b` (the Groq response's own `model`, in
+  `bench/replays/codegen/calls.jsonl`, checked by a test). **The other 6 are as-proposed rows that
+  made zero calls**; there is no reply for them, and their label reflects configuration, not a
+  response. The pre-edit file was not kept, so which rows read `groq` before the edit cannot be
+  re-checked. Earlier versions of this note said six rows. The committed copy and its declared edit
+  are in `bench/results/codegen-v0.4/provenance.json`.
+  The results file is git-ignored, so the edit itself has no commit; its file time is 2026-10-07
+  21:51 (local). The commits that first published its effect are `e3b13b6` (harness label code,
+  which then read the configured model rather than the reply) and `7bfdd39` (the report and these
+  findings). **Fix:** `UnitResult.response_model` is now filled from the model id the provider
+  reported in the replies (saved call rows), the report prefers it, and a replay test checks it. The
+  old rows have no `response_model`; the report shows their edited `model`.
+
+## Erratum (2026-10-08): L1 S1 and S4 attempt 0 had a third validation error
+
+The L1 table above says S1 and S4 failed on `omit_if_null_fields` alone. Re-running the validator
+offline on the recorded replies (no model call) shows that **attempt 0 of both units also failed**
+`UPSERT: target_update_fields must equal target_create_fields`: the model proposed `UPSERT` with
+`target_create_fields = []` and seven `target_update_fields`.
+
+| Unit | Attempt 0 (first reply) | Attempt 1 (the re-ask) |
+|---|---|---|
+| L1 S1 | UPSERT equality; `omit_if_null` on `externalRef`, `phoneNumber` | `omit_if_null` on the same two only (the UPSERT error is gone) |
+| L1 S4 | UPSERT equality; `omit_if_null` on the same two | switched to `CREATE_UPDATE` with a PATCH that does not exist; `omit_if_null` again |
+| L1 S3 | `omit_if_null` on `last_name`, `phone` | valid (then failed the AST gate on `SECRET_LITERAL`) |
+
+* **Does the frozen L1 prompt state the rule? No, it is absent.** `prompts/v1/l1_user.md` says only
+  that `target_create_fields` and `target_update_fields` "are the target fields sent on create and on
+  update", and that `target_create_path` is "null for UPSERT". Nothing says that, under `UPSERT`, the
+  two lists must be equal.
+* **Is it a compiler constraint or a validator convention? A validator convention.** The generated
+  strategy for `UPSERT` sets both lists to the same value (`operations.py`, the `PUT` plan), but the
+  runtime's `_upsert` (`morph_runtime/sync.py`) sends only `update_fields` and never reads
+  `create_fields`, so a different `create_fields` would be ignored, not wrong. The equality is
+  enforced only in `validate_strategy` (`llm_codegen.py`).
+* **Consequence.** A model that follows the prompt literally (no create path for UPSERT, so no create
+  fields) is rejected by an unstated rule. That is a **prompt gap**, and it is a second, separate
+  gap beside the L2 `__cause__` contradiction. The re-ask message named the rule and the model
+  complied in S1 on the next try, which is evidence that feedback works on it. The v0.5 plan therefore
+  tags L1 S1 and S4 as defect-exposed (prompt gap). This does not change any v0.4 outcome.
 
 ## Failure attribution
 
@@ -147,7 +177,9 @@ Who or what each non-READY L1 and L2 outcome is attributed to. Condition D is no
 
 | Unit | Failure | Attributed to |
 |---|---|---|
+| L1 S1 | attempt 0 only: `UPSERT` field-list equality (see the erratum) | **Our prompt gap**: the frozen L1 prompt never states the rule |
 | L1 S1 | `omit_if_null_fields` lists nullable `externalRef`, `phoneNumber` (twice) | Validator rule, **debatable**. The prompt does state the rule ("optional, non-nullable") and the model did not follow it, twice |
+| L1 S4 | attempt 0 only: `UPSERT` field-list equality (see the erratum) | **Our prompt gap**, as for S1 |
 | L1 S4 | the same `omit_if_null` listing; re-ask adds a nonexistent `PATCH /users/{userId}` | Validator rule, **debatable** (first part); model (invented endpoint) |
 | L1 S3 | `SECRET_LITERAL` on a 41-character benign identifier in edge data | **Gate false positive.** Observation only: the proposal also sent `segment` on update, which would overwrite it (a model flaw), but that is not what stopped the unit |
 | L2 S1 | `DUNDER_ACCESS` on `__cause__` | **Our prompt contradiction** (the runtime reference tells the model to check `__cause__`; the gate bans dunders) |
@@ -179,5 +211,7 @@ the O8 column is `-` and correctness is O1 to O7 anyway). Per-scenario in `miles
 3. **`omit_if_null` rule on nullable fields:** the validator rejects it and the prompt defines
    the field as non-nullable only; whether that is the right rule is debatable and to be decided
    before any `codegen-v2` run.
+4. **L1 prompt gap:** the `UPSERT` rule that `target_update_fields` must equal
+   `target_create_fields` is enforced by the validator but never stated in the prompt (see the erratum).
 
 None was changed here: prompts, generator, gate, validator, oracle and fixtures are as frozen.

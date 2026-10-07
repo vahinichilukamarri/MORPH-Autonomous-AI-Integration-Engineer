@@ -44,14 +44,16 @@
       "old_value": "groq",
       "new_value": "openai/gpt-oss-120b",
       "rows_now_carrying_the_new_value": 12,
-      "scope_note": "All 12 L1/L2 rows in the file carry the new value (6 approved, 6 as_proposed). The earlier disclosure in codegen-eval-findings.md said six rows. The pre-edit file was not kept, so which rows read 'groq' before the edit cannot be re-checked; the same label code wrote all 12.",
-      "evidence": "the model field of all 9 recorded replies is openai/gpt-oss-120b (bench/replays/codegen/calls.jsonl); the six rows with real calls are covered by those replies",
+      "scope_note": "12 rows were label-edited (all L1/L2 rows in the file). Only 6 of them have a model reply as evidence: the 6 approved-input rows, which made the 9 real calls. The other 6 are as_proposed rows that made zero calls (they were blocked before any model call), so there is no reply for them; their label reflects configuration, not a response. The pre-edit file was not kept, so which rows read 'groq' before the edit cannot be re-checked. An earlier disclosure said six rows.",
+      "evidence": "the model field of all 9 recorded replies is openai/gpt-oss-120b (bench/replays/codegen/calls.jsonl); those replies cover the 6 approved rows only. The 6 as_proposed rows have no reply.",
       "made_by": "manual edit by the operator of the run",
       "commits_that_first_published_its_effect": [
         "e3b13b6 (harness label code)",
         "7bfdd39 (report and findings)"
       ],
-      "fixed_in_code_by": "ef8b5a9 (response_model recorded from the replies)"
+      "fixed_in_code_by": "ef8b5a9 (response_model recorded from the replies)",
+      "rows_with_a_reply_as_evidence": 6,
+      "rows_without_a_reply": 6
     }
   ]
 }
