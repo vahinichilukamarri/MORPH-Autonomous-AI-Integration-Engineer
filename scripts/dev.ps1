@@ -8,10 +8,15 @@
   ./scripts/dev.ps1 ingest crm mock_systems/openapi/crm.v1.json
   ./scripts/dev.ps1 ingest crm http://localhost:8101/openapi.json
   ./scripts/dev.ps1 mapping-eval --n-runs 1
+  ./scripts/dev.ps1 sandbox-build
+  ./scripts/dev.ps1 sandbox-test
+  ./scripts/dev.ps1 oracle
+  ./scripts/dev.ps1 codegen-eval --conditions D
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('up', 'down', 'test', 'test-slow', 'lint', 'reset-db', 'ingest', 'mapping-eval')]
+    [ValidateSet('up', 'down', 'test', 'test-slow', 'lint', 'reset-db', 'ingest', 'mapping-eval',
+        'sandbox-build', 'sandbox-test', 'oracle', 'codegen-eval')]
     [string]$Command,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
@@ -20,7 +25,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $Root '.run'
-$PythonProjects = 'backend', 'mock_systems', 'bench'
+$PythonProjects = 'backend', 'mock_systems', 'bench', 'sandbox/runtime'
 
 function Invoke-Native {
     # Runs a native command and fails the script on a non-zero exit code.
@@ -149,6 +154,30 @@ switch ($Command) {
         try {
             Invoke-Uv run --group embeddings python -m scripts.run_mapping_eval @Rest
         } finally { Pop-Location }
+    }
+    'sandbox-build' {
+        # The sandbox image and the mock image the sandbox tests start (both labelled).
+        Invoke-Native 'docker' @('build', '-t', 'morph-sandbox:dev', '--label', 'morph.owner=morph',
+            (Join-Path $Root 'sandbox'))
+        Invoke-Native 'docker' @('build', '-t', 'morph-sbx-mock:dev', '--label', 'morph.owner=morph',
+            (Join-Path $Root 'mock_systems'))
+    }
+    'sandbox-test' {
+        # Containment corpus, gate tools, generated tests (needs Docker and the dev Postgres).
+        Push-Location (Join-Path $Root 'backend')
+        try { Invoke-Uv run pytest -m docker -q } finally { Pop-Location }
+    }
+    'oracle' {
+        # The hidden oracle against condition D (needs Docker, the images and the dev Postgres).
+        Push-Location (Join-Path $Root 'bench')
+        try { Invoke-Uv run pytest oracle -q @Rest } finally { Pop-Location }
+    }
+    'codegen-eval' {
+        # The code-generation evaluation; arguments go to the script. L1/L2 with a real model
+        # need --confirm-real-run and GROQ_API_KEY in .env, and only after an explicit go.
+        Import-DotEnv
+        Push-Location (Join-Path $Root 'bench')
+        try { Invoke-Uv run python -m scripts.run_codegen_eval @Rest } finally { Pop-Location }
     }
     'lint' {
         foreach ($proj in $PythonProjects) {

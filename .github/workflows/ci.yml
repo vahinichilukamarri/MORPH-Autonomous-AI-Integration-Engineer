@@ -103,3 +103,62 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+
+  runtime:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sandbox/runtime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run pytest -q
+
+  # Everything that needs Docker: the containment corpus, the gate tools, the generated tests and
+  # the oracle against condition D. Replayed or scripted providers only; no model is called.
+  sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: morph
+          POSTGRES_PASSWORD: morph
+          POSTGRES_DB: morph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U morph -d morph"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://morph:morph@localhost:5432/morph
+      EMBEDDING_PROVIDER: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Build the sandbox and mock images
+        run: |
+          docker build -t morph-sandbox:dev --label morph.owner=morph sandbox
+          docker build -t morph-sbx-mock:dev --label morph.owner=morph mock_systems
+      - name: Containment corpus, gate tools, generated tests
+        working-directory: backend
+        run: |
+          uv sync
+          uv run pytest -m docker -q -p no:cacheprovider
+      - name: Oracle against condition D
+        working-directory: bench
+        run: |
+          uv sync
+          uv run pytest oracle -q -p no:cacheprovider
+      - name: Remove only the resources this job labelled
+        if: always()
+        run: |
+          docker ps -aq --filter label=morph.owner=morph | xargs -r docker rm -f
+          docker network ls -q --filter label=morph.owner=morph | xargs -r docker network rm

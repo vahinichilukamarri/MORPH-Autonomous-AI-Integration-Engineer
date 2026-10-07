@@ -76,3 +76,22 @@ new integration version. Bundles are immutable and content-addressed (`input_has
 `.../versions`, `.../versions/{n}`, `.../files`, `.../gate`, `.../sandbox-runs`, and
 `POST .../versions/{n}/run-tests` (the generated tests, in the sandbox, reported separately from
 the oracle).
+
+## Known limitations
+
+* **S3 (Support to CRM) is update-only.** An id is never invented, and the CRM cannot create a
+  customer under a chosen id. So a Support user is synced only when its `externalRef` names a
+  customer that already exists; a user without `externalRef`, or with one the CRM does not know,
+  is reported `NOT_SYNCABLE` and nothing is created. This **supersedes the plan's natural-key
+  (email) creation for S3**: the natural key is used only when no target identity is mapped at
+  all, which is not the case in S3. Creating CRM customers for never-imported users would need a
+  design decision (for example writing the new id back to Support) that was not made.
+* **Support cannot be listed**, so a Support source needs the operator to supply the ids
+  (`MORPH_SOURCE_KEYS`); there is no discovery of "all users".
+* **The `segment` constant for S3 is a recorded test-only human decision** (`SMB`), create-only,
+  and in S3 it is never sent because S3 never creates.
+* **Two source records that map to the same target id overwrite each other** (for example
+  `C-7` and `C-007` both give `userId` 7). That follows from the answer key's id mapping; the
+  integration does not detect it.
+* **Only page/page_size pagination, API-key-header and bearer auth, and Python integrations**
+  are supported. Anything else is reported as `BLOCKED_UNSUPPORTED` with the reason.
