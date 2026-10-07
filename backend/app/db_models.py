@@ -233,6 +233,9 @@ class LLMCall(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     mapping_run_id: Mapped[int | None] = mapped_column(ForeignKey("mapping_runs.id"), index=True)
+    integration_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("integration_versions.id"), index=True
+    )
     target_field: Mapped[str | None] = mapped_column(Text)
     attempt: Mapped[int] = mapped_column(Integer)
     provider: Mapped[str] = mapped_column(String(32))
@@ -247,3 +250,98 @@ class LLMCall(Base):
     http_attempts: Mapped[int] = mapped_column(Integer)
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Integration(Base):
+    """One integration per mapping run and condition; input changes append versions."""
+
+    __tablename__ = "integrations"
+    __table_args__ = (UniqueConstraint("mapping_run_id", "condition"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapping_run_id: Mapped[int] = mapped_column(ForeignKey("mapping_runs.id"), index=True)
+    condition: Mapped[str] = mapped_column(String(8))
+    name: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    versions: Mapped[list["IntegrationVersion"]] = relationship(
+        back_populates="integration", order_by="IntegrationVersion.version"
+    )
+
+
+class IntegrationVersion(Base):
+    __tablename__ = "integration_versions"
+    __table_args__ = (UniqueConstraint("integration_id", "version"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    integration_id: Mapped[int] = mapped_column(ForeignKey("integrations.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(32))
+    input_hash: Mapped[str] = mapped_column(String(64))
+    bundle_hash: Mapped[str | None] = mapped_column(String(64))
+    generator_version: Mapped[str] = mapped_column(String(16))
+    runtime_version: Mapped[str] = mapped_column(String(16))
+    mapping_version_ids: Mapped[list[Any]] = mapped_column(JSONB)
+    manifest: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    integration: Mapped[Integration] = relationship(back_populates="versions")
+    files: Mapped[list["IntegrationFile"]] = relationship(
+        back_populates="version", order_by="IntegrationFile.path"
+    )
+    gate_results: Mapped[list["GateResultRow"]] = relationship(
+        back_populates="version", order_by="GateResultRow.id"
+    )
+    sandbox_runs: Mapped[list["SandboxRunRow"]] = relationship(
+        back_populates="version", order_by="SandboxRunRow.id"
+    )
+
+
+class IntegrationFile(Base):
+    __tablename__ = "integration_files"
+    __table_args__ = (UniqueConstraint("integration_version_id", "path"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    integration_version_id: Mapped[int] = mapped_column(
+        ForeignKey("integration_versions.id"), index=True
+    )
+    path: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(16))
+    content: Mapped[str] = mapped_column(Text)
+
+    version: Mapped[IntegrationVersion] = relationship(back_populates="files")
+
+
+class GateResultRow(Base):
+    __tablename__ = "gate_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    integration_version_id: Mapped[int] = mapped_column(
+        ForeignKey("integration_versions.id"), index=True
+    )
+    stage: Mapped[str] = mapped_column(String(16))
+    passed: Mapped[bool] = mapped_column(Boolean)
+    findings: Mapped[list[Any]] = mapped_column(JSONB)
+
+    version: Mapped[IntegrationVersion] = relationship(back_populates="gate_results")
+
+
+class SandboxRunRow(Base):
+    __tablename__ = "sandbox_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    integration_version_id: Mapped[int] = mapped_column(
+        ForeignKey("integration_versions.id"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(24))
+    limits: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    outcome: Mapped[str] = mapped_column(String(16))
+    exit_code: Mapped[int | None] = mapped_column(Integer)
+    duration_s: Mapped[float] = mapped_column(Float)
+    stdout_excerpt: Mapped[str] = mapped_column(Text)
+    stderr_excerpt: Mapped[str] = mapped_column(Text)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    version: Mapped[IntegrationVersion] = relationship(back_populates="sandbox_runs")

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.api.discovery import router as discovery_router
+from app.api.integrations import router as integrations_router
 from app.api.mapping import router as mapping_router
 from app.db import get_engine
 from app.settings import get_settings
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
 
     app.include_router(discovery_router)
     app.include_router(mapping_router)
+    app.include_router(integrations_router)
     return app
 
 
