@@ -62,7 +62,7 @@ DEFAULT_OUTPUT = REPO_ROOT / "docs" / "codegen-eval.md"
 TEST_ONLY_OUTPUT = BENCH_DIR / ".cache" / "codegen-eval-test-only.md"
 PARTIAL_OUTPUT = BENCH_DIR / ".cache" / "codegen-eval-partial.md"
 STORE_ROOT = BENCH_DIR / ".cache" / "codegen-eval"
-MAPPING_STORE = BENCH_DIR / ".cache" / "mapping-eval" / "groq-openai_gpt-oss-120b"
+MAPPING_STORE = REPO_ROOT / ".cache" / "mapping-eval" / "groq-openai_gpt-oss-120b"
 REPLAYS = BENCH_DIR / "replays"
 SHORT_IDS = {
     "crm_customer_to_support_user": "S1",

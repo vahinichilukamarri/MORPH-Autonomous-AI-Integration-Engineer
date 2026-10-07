@@ -251,6 +251,11 @@ def render_report(results: Sequence[UnitResult], run_date: str, *, test_only: bo
         "* `Oracle correct` means no failed check in O1 to O7; O8 (the review gate) is shown but is",
         "  not part of correctness.",
         "* A `BLOCKED_*` or `LLM_INVALID` status is a result: no code was produced and none was run.",
+        "* `as_proposed` mappings are rebuilt, with no model call, from the responses saved by the",
+        "  real v0.3 evaluation (the committed replay for S1, the local response store for the",
+        "  others), validated with validator v1 as in that run. A unit whose required fields were",
+        "  left in review is blocked exactly as a person would see it.",
+        "* Every oracle check passed or failed on its own; results are never weighted or combined.",
         "",
     ]
     return "\n".join(out)
