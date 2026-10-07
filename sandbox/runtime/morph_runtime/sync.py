@@ -285,14 +285,19 @@ class SyncEngine:
     def _create_or_update(self, mapped: dict[str, JsonScalar]) -> tuple[Outcome, str]:
         spec = self.strategy.target
         identity = mapped.get(spec.id_field)
-        existing = self._get(identity) if identity is not None and spec.get_path else None
-        if existing is None and spec.natural_key and mapped.get(spec.natural_key) is not None:
-            existing = self._lookup_natural(mapped[spec.natural_key])
-        if existing is None:
-            if identity is None and not spec.id_assigned_by_target:
+        if spec.id_field in mapped:
+            # the mapping supplies the target identity: it is the only way to find the record
+            if identity is None:
                 return Outcome.NOT_SYNCABLE, "mapped target id is null"
-            if identity is not None and spec.id_assigned_by_target and not spec.natural_key:
-                return Outcome.NOT_SYNCABLE, "target assigns ids and has no natural key"
+            existing = self._get(identity)
+            if existing is None and spec.id_assigned_by_target:
+                return Outcome.NOT_SYNCABLE, "target assigns ids and has no record with this id"
+        else:
+            value = mapped.get(spec.natural_key) if spec.natural_key else None
+            if value is None:
+                return Outcome.NOT_SYNCABLE, "no target identity is mapped and no natural key"
+            existing = self._lookup_natural(value)
+        if existing is None:
             self._create(mapped)
             return Outcome.CREATED, ""
         eid = existing.get(spec.id_field, identity)

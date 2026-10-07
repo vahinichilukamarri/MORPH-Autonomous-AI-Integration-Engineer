@@ -249,16 +249,17 @@ def test_missing_source_field_is_contract_drift_with_no_writes() -> None:
     assert [m for m, _ in support.log if m == "PUT"] == []
 
 
-def test_keys_mode_reads_by_id_and_reports_missing_keys() -> None:
+def test_keys_mode_updates_by_mapped_id_and_never_invents_one() -> None:
     support_rows: list[dict[str, Any]] = [
         {"userId": 1, "externalRef": None, "fullName": "A"},
         {"userId": 2, "externalRef": "C-1", "fullName": "B"},
+        {"userId": 3, "externalRef": "C-404", "fullName": "C"},
     ]
     source = SourceSpec(mode=SourceMode.KEYS, key_field="userId", get_path="/users/{id}")
     target = TargetSpec(
         mode=TargetMode.CREATE_UPDATE, id_field="customer_id", get_path="/customers/{id}",
         update_method="PATCH", update_path="/customers/{id}", create_path="/customers",
-        create_fields=("first_name", "segment"), update_fields=("first_name", "segment"),
+        create_fields=("first_name", "segment"), update_fields=("first_name",),
         create_only=("segment",), natural_key="first_name", id_assigned_by_target=True,
         list_path="/customers", total_key="total",
     )  # fmt: skip
@@ -270,38 +271,57 @@ def test_keys_mode_reads_by_id_and_reports_missing_keys() -> None:
             "segment": "SMB",
         }
 
-    crm, support = (
-        FakeCrm([{"customer_id": "C-1", "first_name": "Old", "segment": "ENTERPRISE"}]),
-        FakeSupport(support_rows),
-    )
+    crm = FakeCrm([{"customer_id": "C-1", "first_name": "Old", "segment": "ENTERPRISE"}])
+    support = FakeSupport(support_rows)
     clock = Clock()
     engine = SyncEngine(
         Strategy(source, target),
         client("http://support", BearerAuth("t"), support, clock),
         client("http://crm", ApiKeyAuth("X-API-Key", "k"), crm, clock),
         to_crm,
-        keys=("1", "2", "99"),
+        keys=("1", "2", "3", "99"),
         clock=clock,
     )
     report = engine.run()
     by_key = {r.key: r for r in report.records}
-    assert by_key["1"].outcome is Outcome.CREATED  # no id: natural-key miss, created
+    assert by_key["1"].outcome is Outcome.NOT_SYNCABLE  # null id: never fabricated
     assert by_key["2"].outcome is Outcome.UPDATED  # found by its externalRef
+    assert by_key["3"].outcome is Outcome.NOT_SYNCABLE  # the target cannot create with that id
     assert by_key["99"].outcome is Outcome.FAILED and by_key["99"].category is Category.NOT_FOUND
-    # create-only constants never overwrite an existing record
-    assert crm.rows["C-1"]["segment"] == "ENTERPRISE" and crm.rows["C-1"]["first_name"] == "B"
-    # a second run creates no duplicate: user 1 now matches by its natural key
-    before = len(crm.rows)
-    engine2 = SyncEngine(
-        Strategy(source, target),
-        client("http://support", BearerAuth("t"), support, clock),
-        client("http://crm", ApiKeyAuth("X-API-Key", "k"), crm, clock),
-        to_crm,
-        keys=("1", "2"),
-        clock=clock,
-    )
-    engine2.run()
-    assert len(crm.rows) == before
+    assert crm.rows["C-1"]["segment"] == "ENTERPRISE"  # create-only constants never overwrite
+    assert crm.rows["C-1"]["first_name"] == "B" and len(crm.rows) == 1
+    assert [m for m, _ in crm.log if m == "POST"] == []
+
+
+def test_without_a_mapped_identity_the_natural_key_creates_once() -> None:
+    source = SourceSpec(mode=SourceMode.KEYS, key_field="userId", get_path="/users/{id}")
+    target = TargetSpec(
+        mode=TargetMode.CREATE_UPDATE, id_field="customer_id", get_path="/customers/{id}",
+        update_method="PATCH", update_path="/customers/{id}", create_path="/customers",
+        create_fields=("first_name", "segment"), update_fields=("first_name",),
+        create_only=("segment",), natural_key="first_name", id_assigned_by_target=True,
+        list_path="/customers", total_key="total",
+    )  # fmt: skip
+
+    def to_crm(record: Record) -> dict[str, JsonScalar]:
+        return {"first_name": record["fullName"], "segment": "SMB"}
+
+    crm = FakeCrm([])
+    support = FakeSupport([{"userId": 1, "externalRef": None, "fullName": "Zed"}])
+    clock = Clock()
+
+    def run_once() -> Any:
+        return SyncEngine(
+            Strategy(source, target),
+            client("http://support", BearerAuth("t"), support, clock),
+            client("http://crm", ApiKeyAuth("X-API-Key", "k"), crm, clock),
+            to_crm,
+            keys=("1",),
+            clock=clock,
+        ).run()
+
+    assert run_once().counts()["CREATED"] == 1
+    assert run_once().counts()["UNCHANGED"] == 1 and len(crm.rows) == 1
 
 
 def test_ambiguous_create_failure_does_not_duplicate() -> None:
@@ -315,7 +335,7 @@ def test_ambiguous_create_failure_does_not_duplicate() -> None:
     )  # fmt: skip
 
     def to_crm(record: Record) -> dict[str, JsonScalar]:
-        return {"customer_id": None, "first_name": record["fullName"], "segment": "SMB"}
+        return {"first_name": record["fullName"], "segment": "SMB"}
 
     crm = FakeCrm([])
     crm.fail_posts = [500]  # stored, then answered with a 500
