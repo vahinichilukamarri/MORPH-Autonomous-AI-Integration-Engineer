@@ -12,6 +12,7 @@ from morph_bench.codegen_eval import (
     load_results,
     oracle_summary,
     render_report,
+    response_model_id,
 )
 from scripts.run_codegen_eval import DEFAULT_OUTPUT, TEST_ONLY_OUTPUT, check_options
 
@@ -105,3 +106,14 @@ def test_refusal_rules(
 ) -> None:
     refusal = check_options(conditions, provider, test_only, confirm, output)
     assert (refusal is None) if expected is None else (refusal is not None and expected in refusal)
+
+
+def test_the_model_label_is_the_id_the_replies_reported_not_the_requested_one() -> None:
+    assert response_model_id(["openai/gpt-oss-120b"] * 3) == "openai/gpt-oss-120b"
+    assert response_model_id(["b", "a", "a"]) == "a+b"
+    assert response_model_id([]) is None
+    result = unit(
+        condition="L2", provider="groq", model="groq", response_model="openai/gpt-oss-120b",
+        llm=LLMUse(calls=1),
+    )  # fmt: skip
+    assert "groq/openai/gpt-oss-120b" in render_report([result], "2026-10-07", test_only=False)

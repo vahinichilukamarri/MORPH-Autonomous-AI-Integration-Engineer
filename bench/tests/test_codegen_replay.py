@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from morph_bench.oracle.build import SAMPLES_DIR, seed_mapping_run
 from morph_bench.oracle.models import load_fixture
+from scripts.run_codegen_eval import response_model
 
 REPLAYS = Path(__file__).resolve().parents[1] / "replays" / "codegen"
 EXPECTED = json.loads((REPLAYS / "expected.json").read_text(encoding="utf-8"))
@@ -70,6 +71,7 @@ def test_replayed_unit_reproduces_the_recorded_outcome(
     ][:6]
     # Python writes the file name into a SyntaxError message differently on Windows and Linux
     assert [plain(f) for f in findings] == [plain(str(f)) for f in unit["gate_findings"]]  # type: ignore[attr-defined]
+    assert response_model(session, version) == "openai/gpt-oss-120b"  # from the recorded reply
     info = version.manifest["llm"]
     assert info["calls"] == unit["calls"]
     assert info["input_tokens"] == unit["input_tokens"]

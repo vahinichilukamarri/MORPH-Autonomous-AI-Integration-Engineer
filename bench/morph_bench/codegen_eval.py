@@ -50,7 +50,8 @@ class UnitResult(_Model):
     input_set: str
     condition: str
     provider: str = "none"
-    model: str = "none"
+    model: str = "none"  # the requested model; part of the resume key
+    response_model: str | None = None  # the model id the provider reported in its replies
     status: str
     blocked_reasons: list[str] = Field(default_factory=list)
     gate: dict[str, bool] = Field(default_factory=dict)
@@ -68,6 +69,12 @@ class UnitResult(_Model):
     @property
     def key(self) -> str:
         return f"{self.scenario_id}|{self.input_set}|{self.condition}|{self.provider}|{self.model}"
+
+
+def response_model_id(models: Iterable[str]) -> str | None:
+    """The model id reported by the replies themselves (``+``-joined if they disagree)."""
+    distinct = sorted(set(models))
+    return "+".join(distinct) if distinct else None
 
 
 def load_results(path: Path) -> list[UnitResult]:
@@ -139,7 +146,9 @@ def render_report(results: Sequence[UnitResult], run_date: str, *, test_only: bo
             "> not a measurement of any model. Never commit this file as the report.**",
             "",
         ]
-    models = sorted({f"{r.provider}/{r.model}" for r in rows if r.condition != "D"})
+    models = sorted(
+        {f"{r.provider}/{r.response_model or r.model}" for r in rows if r.condition != "D"}
+    )
     out += [
         f"Run date: {run_date}. Units: **N = {len(rows)}** (scenario x input set x condition); "
         f"models: {', '.join(models) or 'none (condition D uses no model)'}.",
@@ -261,6 +270,13 @@ def render_report(results: Sequence[UnitResult], run_date: str, *, test_only: bo
         "* `not run` in the gate column means an earlier stage failed, so the later stage was never",
         "  executed (a failing gate never lets code run).",
         "* Every oracle check passed or failed on its own; results are never weighted or combined.",
+        "* The oracle table lists O1 to O7 only: this evaluation runs the O1 to O7 suites against the",
+        "  generated bundle, and O8 (the review gate, `test_review_gate.py`) is not run per unit, so its",
+        "  column is `-`. The 413 checks quoted in `milestones.md` are the standalone oracle run and",
+        "  include 4 O8 checks per scenario (12); the per-unit O1 to O7 sums are 139 + 139 + 123 = 401.",
+        "* Token counts are the provider's own: `Output tok.` is its `completion_tokens` and",
+        "  `Reasoning tok.` its `reasoning_tokens` detail. Whether the former already contains the",
+        "  latter is not verified from the saved data; totals are given both ways in the findings.",
         "* The reading of these numbers, with what the model proposed and wrote, is in",
         "  `codegen-eval-findings.md`.",
         "",

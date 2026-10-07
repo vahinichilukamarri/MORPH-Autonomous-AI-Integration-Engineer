@@ -47,6 +47,7 @@ from morph_bench.codegen_eval import (
     load_results,
     oracle_summary,
     render_report,
+    response_model_id,
 )
 from morph_bench.loader import SCENARIOS_ROOT, discover
 from morph_bench.mapping_eval import Limits
@@ -155,6 +156,13 @@ def _llm_use(session: Session, version: IntegrationVersion) -> LLMUse | None:
     )
 
 
+def response_model(session: Session, version: IntegrationVersion) -> str | None:
+    """The model id the provider reported in the replies of this version, from the saved calls."""
+    return response_model_id(
+        session.scalars(select(LLMCall.model).where(LLMCall.integration_version_id == version.id))
+    )
+
+
 def _blocked_reasons(version: IntegrationVersion) -> list[str]:
     manifest = version.manifest
     review = manifest.get("review") or {}
@@ -209,6 +217,7 @@ def run_unit(
         ][:6],
         files=len(files),
         lines=sum(f.content.count("\n") + 1 for f in files if f.content),
+        response_model=response_model(session, version) if condition != "D" else None,
         llm=_llm_use(session, version) if condition != "D" else None,
         test_only=test_only,
     )
