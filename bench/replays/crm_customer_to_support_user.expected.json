@@ -1,0 +1,45 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "full_schema": [
+    {
+      "target_field": "userId",
+      "fully_correct": true,
+      "proposed": "TRANSFORMATION [customer_id] COPY>REGEX_EXTRACT>CAST"
+    },
+    {
+      "target_field": "externalRef",
+      "fully_correct": true,
+      "proposed": "DIRECT [customer_id] COPY"
+    },
+    {
+      "target_field": "fullName",
+      "fully_correct": true,
+      "proposed": "COMPOSITE [first_name, last_name] JOIN_NONNULL"
+    },
+    {
+      "target_field": "email_address",
+      "fully_correct": true,
+      "proposed": "DIRECT [email] COPY"
+    },
+    {
+      "target_field": "phoneNumber",
+      "fully_correct": true,
+      "proposed": "TRANSFORMATION [phone] COPY>STRIP_PREFIX"
+    },
+    {
+      "target_field": "accountState",
+      "fully_correct": true,
+      "proposed": "TRANSFORMATION [status] COPY>MAP_ENUM"
+    },
+    {
+      "target_field": "tier",
+      "fully_correct": true,
+      "proposed": "TRANSFORMATION [segment] COPY>MAP_ENUM"
+    },
+    {
+      "target_field": "createdAt",
+      "fully_correct": true,
+      "proposed": "TRANSFORMATION [created_at] COPY>FORMAT_DATETIME"
+    }
+  ]
+}
