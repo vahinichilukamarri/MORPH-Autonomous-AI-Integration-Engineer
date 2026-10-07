@@ -232,3 +232,29 @@ locally.
 - Mapping types are labels with fuzzy edges (DIRECT vs TRANSFORMATION vs DERIVED); scoring does
   not depend on them.
 - Runs are synchronous inside the request. Fine at this size; a job queue is a later concern.
+
+## Validator v2 (post-hoc, designed after seeing v1 results)
+
+The v1 evaluation is frozen and reported as it was. After its results were reviewed, a second,
+versioned validator path was added (`app/mapping/validate_v2.py`, selected with
+`run_mapping(validator="v2")`). It runs every v1 check unchanged and only ever adds reasons. It
+was designed after the v1 failures were known, so its numbers are labelled post-hoc and are not
+an unbiased estimate; see the v2 section of `docs/mapping-eval.md`.
+
+| Code | Rule | Effect |
+|---|---|---|
+| `MOSTLY_NULL_OUTPUT` | more than half of the sample records whose source values are non-null produce null | WARN, forces review |
+| `CONSTANT_OUTPUT` | a mapping not declared CONSTANT gives one single value although the sources differ | WARN, forces review |
+| `LOSSY_COLLAPSE` | several distinct values of a categorical source give the same output (beyond the v1 `MAP_ENUM` check) | WARN, informational |
+| `LOSSY_TRUNCATION` | a `SPLIT_PART` discards parts of the input for some record | WARN, informational |
+
+Why: a nullable target hides a pipeline that returns null for everything, because null is a
+legal value there, so v1 passed it with full confidence. The lossy checks are recorded but do
+not force review (`LOSSY_FORCES_REVIEW` is empty): the measured trade-off is in
+`docs/mapping-eval.md`, and whether to force review for truncation is left as an explicit
+decision. The confidence formula is unchanged (v1); a v2 warning lowers the validation term
+from PASS to WARN like any other warning.
+
+Rescoring saved results never calls a model: `bench/scripts/rescore_v2.py` puts a provider that
+raises under the resumable store, reproduces the v1 outcome from the saved responses, then
+applies v2.

@@ -149,3 +149,125 @@ Rate-limit headers on the most recent response:
 - `x-ratelimit-reset-tokens`: 29.055s
 
 429 waits honoured: 0.
+
+<!-- v2-post-hoc:start -->
+
+## Validator v2, post-hoc rescoring
+
+> **v2, post-hoc, designed after seeing v1 results.** The v2 checks were written
+> after the v1 failures above were known, and they are aimed at exactly those failures.
+> This section is therefore **not an unbiased result**: it shows what the new checks
+> would have done to this run, not how they will do on new scenarios. The v1 section
+> above is unchanged.
+
+- Rescored on 2026-10-07 from the saved v1 responses of `openai/gpt-oss-120b`: 65 stored responses reused, **0 new LLM calls**.
+- Reproduction check: validator v1 re-run on the same saved responses reproduced 64/64 mapping outcomes exactly (correctness, review status and confidence), so the comparison below starts from the reported v1 numbers.
+- Accuracy means *fully correct* as graded against the answer keys. The mappings are identical in v1 and v2; only validation, confidence and review flags differ.
+
+### What v2 adds
+
+| Check | Rule | Effect |
+|---|---|---|
+| `MOSTLY_NULL_OUTPUT` | more than half of the sample records with a non-null source produce null | review-forcing warning |
+| `CONSTANT_OUTPUT` | a mapping not declared CONSTANT gives one single value although the sources differ | review-forcing warning |
+| `LOSSY_COLLAPSE` | several distinct values of a categorical source give the same output (beyond the v1 `MAP_ENUM` check) | recorded, does not force review |
+| `LOSSY_TRUNCATION` | a `SPLIT_PART` discards parts of the input for some record | recorded, does not force review |
+
+A review-forcing warning also lowers validation from PASS to WARN, so confidence drops (formula v1, unchanged). The two lossy checks do not force review; the reasoning and the measured trade-off are in the policy table below.
+
+### B: LLM, full schema: v1 versus v2
+
+| Measure | v1 | v2 |
+|---|---|---|
+| Flagged for review | 6/32 (18.8%) | 6/32 (18.8%) |
+| Accuracy of flagged mappings | 5/6 (83.3%) | 5/6 (83.3%) |
+| Accuracy of unflagged (auto-accepted) mappings | 25/26 (96.2%) | 25/26 (96.2%) |
+| Wrong mappings that were auto-accepted | 1/2 (50.0%) | 1/2 (50.0%) |
+
+Confidence bucket versus accuracy (fully correct fraction):
+
+| Confidence | v1 | v2 |
+|---|---|---|
+| 0.00 to 0.50 | n/a | n/a |
+| 0.50 to 0.70 | 4/5 (80.0%) | 4/5 (80.0%) |
+| 0.70 to 0.85 | 4/4 (100.0%) | 4/5 (80.0%) |
+| 0.85 to 1.00 (inclusive) | 21/22 (95.5%) | 21/21 (100.0%) |
+| no confidence (UNRESOLVED) | 1/1 (100.0%) | 1/1 (100.0%) |
+
+Newly flagged by v2: 0 mapping(s), of which 0 were wrong (caught) and 0 were correct (new false positives).
+
+Recorded by v2 but not forced to review (informational):
+
+| Scenario / field | Correct? | New v2 codes |
+|---|---|---|
+| `support_user_to_crm_customer` `last_name` | no | LOSSY_TRUNCATION |
+
+Wrong mappings still auto-accepted under v2: 1.
+
+| Scenario / field | Proposed | Expected | Why it is wrong |
+|---|---|---|---|
+| `support_user_to_crm_customer` `last_name` | TRANSFORMATION [fullName] COPY>SPLIT_PART | TRANSFORMATION [fullName] | on {'fullName': 'Mary Ann Smith'}: produced 'Ann', expected 'Ann Smith' |
+
+### C: LLM + retrieval (RAG): v1 versus v2
+
+| Measure | v1 | v2 |
+|---|---|---|
+| Flagged for review | 6/32 (18.8%) | 7/32 (21.9%) |
+| Accuracy of flagged mappings | 4/6 (66.7%) | 4/7 (57.1%) |
+| Accuracy of unflagged (auto-accepted) mappings | 25/26 (96.2%) | 25/25 (100.0%) |
+| Wrong mappings that were auto-accepted | 1/3 (33.3%) | 0/3 (0.0%) |
+
+Confidence bucket versus accuracy (fully correct fraction):
+
+| Confidence | v1 | v2 |
+|---|---|---|
+| 0.00 to 0.50 | n/a | n/a |
+| 0.50 to 0.70 | 3/5 (60.0%) | 3/5 (60.0%) |
+| 0.70 to 0.85 | 3/3 (100.0%) | 3/4 (75.0%) |
+| 0.85 to 1.00 (inclusive) | 22/23 (95.7%) | 22/22 (100.0%) |
+| no confidence (UNRESOLVED) | 1/1 (100.0%) | 1/1 (100.0%) |
+
+Newly flagged by v2: 1 mapping(s), of which 1 were wrong (caught) and 0 were correct (new false positives).
+
+| Scenario / field | Correct? | Proposed | New v2 codes | v1 to v2 confidence |
+|---|---|---|---|---|
+| `support_user_to_crm_customer` `last_name` | no (caught) | TRANSFORMATION [fullName] COPY>REGEX_EXTRACT | MOSTLY_NULL_OUTPUT | 1.00 to 0.78 |
+
+Wrong mappings still auto-accepted under v2: 0.
+
+### Should the lossy checks force review?
+
+Measured on this run, for B and C together (64 mapping outcomes). *Caught* is a wrong mapping that this policy sends to review but v1 did not; *false positive* is a correct mapping that this policy sends to review but v1 did not.
+
+| Policy | Flagged for review | Accuracy of unflagged | Caught | False positives | Wrong and still unflagged |
+|---|---|---|---|---|---|
+| v1 (as reported above) | 12/64 (18.8%) | 50/52 (96.2%) | 0 | 0 | 2 |
+| v2 as shipped (null and constant checks force review; lossy checks informational) | 13/64 (20.3%) | 50/51 (98.0%) | 1 | 0 | 1 |
+| v2 + LOSSY_TRUNCATION forces review | 14/64 (21.9%) | 50/50 (100.0%) | 2 | 0 | 0 |
+| v2 + many-to-one value collapse forces review (INFORMATION_LOSS_ENUM, LOSSY_COLLAPSE) | 19/64 (29.7%) | 44/45 (97.8%) | 1 | 6 | 1 |
+| v2 + every lossy warning forces review | 20/64 (31.2%) | 44/44 (100.0%) | 2 | 6 | 0 |
+
+New v2 codes raised across B and C: LOSSY_TRUNCATION x3, MOSTLY_NULL_OUTPUT x1.
+
+The *false positives* column only counts correct mappings that v1 had not already sent to review. How many correct mappings carry each lossy code, and how many of those v1 already flagged:
+
+| Lossy code family | Mappings carrying it | Correct | Correct and already flagged in v1 |
+|---|---|---|---|
+| LOSSY_TRUNCATION | 3 | 2 | 2 |
+| INFORMATION_LOSS_ENUM / LOSSY_COLLAPSE | 6 | 6 | 0 |
+
+### Lossy checks: shipped informational, decision left to you
+
+As shipped, no lossy warning forces review (`LOSSY_FORCES_REVIEW` is empty), because this run alone cannot justify it for every kind of loss. What the numbers above say:
+
+- Truncation (`SPLIT_PART` discarding parts of the input) is the only lossy signal that touched a wrong mapping here. Forcing it would have sent the silent `last_name` error to review. The correct mappings that carry it were already in review in v1, so on this run it adds no new false positive; on other data a correct split would be flagged, which is acceptable only because the pipeline really does discard user data.
+- A many-to-one value collapse (the `tier` map, SMB and MIDMARKET to STANDARD) is intended by the business rule in the requirement text and was correct in every case here. Forcing review for it turns each of those correct mappings into a false positive, and no wrong mapping carried the code. A deterministic check cannot tell an intended collapse from an accidental one.
+- So the reasoning favours forcing review for truncation only, and not for value collapse. That is a recommendation, **not applied**; it needs your decision.
+
+### Limits of this section
+
+- The checks were designed after the failures were seen, and the sample is 32 fields per configuration at N=1. Counts of one or two mappings are within noise.
+- v2 only helps when the failure shows up in the sample records: a wrong mapping that produces plausible, varied, non-null output (the `customer_id` built from `userId` in B) is invisible to these checks and is flagged only by the confidence threshold.
+- Two things v2 does not fix: the per-field confidence still comes from the unchanged v1 formula, and v2 never inspects whether a mapping is semantically right, only whether its outputs on the sample records look degenerate.
+
+<!-- v2-post-hoc:end -->

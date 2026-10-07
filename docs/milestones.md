@@ -338,3 +338,18 @@ after the first real run is prompt v2 or confidence formula v2 and appears in
 The first real run (N=1, prompt v1 / confidence-v1, `openai/gpt-oss-120b` on Groq) is in
 `docs/mapping-eval.md`. It is generated from the saved run results; read it there rather than
 here. The scenario 1 responses of that run are the replay fixtures CI uses.
+
+### Validator v2 rescoring (post-hoc)
+
+Re-score the saved v1 responses with validator v2. Makes no LLM calls and leaves the v1 report
+text above it byte-identical; it only appends or replaces the v2 section:
+
+```powershell
+./scripts/dev.ps1 up
+cd bench
+$env:EMBEDDING_CACHE_DIR = (Resolve-Path ../.cache/fastembed).Path
+uv run --group embeddings python -m scripts.rescore_v2
+cd ..
+git diff --stat docs/mapping-eval.md
+```
+
