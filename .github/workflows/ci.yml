@@ -156,6 +156,11 @@ jobs:
         run: |
           uv sync
           uv run pytest -m docker -q -p no:cacheprovider
+      - name: Show which sandbox tests failed
+        if: failure()
+        working-directory: backend
+        run: |
+          uv run pytest -m docker -q --tb=short -p no:cacheprovider 2>&1 | grep -E "^(FAILED|ERROR|E  )" | head -25 | sed 's/^/::error::/'
       - name: Explain a sandbox limit failure
         if: failure()
         working-directory: backend
