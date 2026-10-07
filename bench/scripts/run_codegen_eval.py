@@ -125,6 +125,15 @@ def proposed_run(session: Session, bundle: Bundle, replay_dir: Path | None) -> i
     return save_run(session, result, settings.llm_temperature).id
 
 
+def _model_label(llm: BaseLLMProvider | None) -> str:
+    """The model id: the provider's own, or the configured one for the real providers."""
+    if llm is None:
+        return "none"
+    settings = get_settings()
+    configured = {"groq": settings.groq_model, "ollama": settings.ollama_model}.get(llm.name)
+    return str(getattr(llm, "model", None) or configured or llm.name)
+
+
 # ---- one unit ----------------------------------------------------------------------------------
 
 
@@ -189,9 +198,7 @@ def run_unit(
         input_set=input_set,
         condition=condition,
         provider=llm.name if llm and condition != "D" else "none",
-        model=str(getattr(llm, "model", llm.name if llm else "none"))
-        if condition != "D"
-        else "none",
+        model=_model_label(llm) if condition != "D" else "none",
         status=version.status,
         blocked_reasons=_blocked_reasons(version),
         gate={g.stage: g.passed for g in version.gate_results},
@@ -327,7 +334,7 @@ def main(
                             scenario_id=bundle.scenario.id, input_set=input_set,
                             condition=condition, status="",
                             provider=unit_llm.name if unit_llm else "none",
-                            model=str(getattr(unit_llm, "model", unit_llm.name)) if unit_llm else "none",
+                            model=_model_label(unit_llm) if unit_llm else "none",
                         )  # fmt: skip
                         if probe.key in done and not args.rerun:
                             print(f"skip (saved): {probe.key}")

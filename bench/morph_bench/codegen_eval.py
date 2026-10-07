@@ -172,7 +172,10 @@ def render_report(results: Sequence[UnitResult], run_date: str, *, test_only: bo
                 _label(r),
                 r.condition,
                 f"`{r.status}`",
-                "/".join("pass" if r.gate.get(s) else "FAIL" for s in ("ast", "ruff", "mypy"))
+                "/".join(
+                    {True: "pass", False: "FAIL", None: "not run"}[r.gate.get(s)]
+                    for s in ("ast", "ruff", "mypy")
+                )
                 if r.gate
                 else "-",
                 _tests(r.generated_tests),
@@ -255,7 +258,11 @@ def render_report(results: Sequence[UnitResult], run_date: str, *, test_only: bo
         "  real v0.3 evaluation (the committed replay for S1, the local response store for the",
         "  others), validated with validator v1 as in that run. A unit whose required fields were",
         "  left in review is blocked exactly as a person would see it.",
+        "* `not run` in the gate column means an earlier stage failed, so the later stage was never",
+        "  executed (a failing gate never lets code run).",
         "* Every oracle check passed or failed on its own; results are never weighted or combined.",
+        "* The reading of these numbers, with what the model proposed and wrote, is in",
+        "  `codegen-eval-findings.md`.",
         "",
     ]
     return "\n".join(out)
