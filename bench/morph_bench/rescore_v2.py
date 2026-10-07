@@ -344,7 +344,16 @@ def _policy_section(pairs: Sequence[FieldPair]) -> list[str]:
     return out
 
 
+def splice_block(existing: str, section: str, start: str, end: str) -> str:
+    """The document with one marked block replaced (or appended); everything else is kept."""
+    if start in existing and end in existing.split(start, 1)[1]:
+        before, rest = existing.split(start, 1)
+        after = rest.split(end, 1)[1].lstrip("\n")
+        tail = "\n" + after if after else ""
+        return before.rstrip("\n") + "\n\n" + section.rstrip("\n") + "\n" + tail
+    return existing.rstrip("\n") + "\n\n" + section
+
+
 def splice_section(existing: str, section: str) -> str:
-    """The existing document with the v2 section appended or replaced; the text above is kept."""
-    before = existing.split(START, 1)[0].rstrip("\n")
-    return before + "\n\n" + section
+    """The existing document with the v2 section appended or replaced; the rest is kept."""
+    return splice_block(existing, section, START, END)

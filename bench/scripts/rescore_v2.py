@@ -38,8 +38,13 @@ from morph_bench.rescore_v2 import (
     FieldPair,
     V2Meta,
     render_v2_section,
+    splice_block,
     splice_section,
 )
+from morph_bench.rescore_v2 import START as V2_START
+from morph_bench.rescore_v21 import END as V21_END
+from morph_bench.rescore_v21 import START as V21_START
+from morph_bench.rescore_v21 import render_v21_section
 from morph_bench.systems import REPO_ROOT
 from scripts.run_mapping_eval import (
     ResumableProvider,
@@ -147,13 +152,14 @@ def rescore(
             tail = (samples_dir, temperature, max_output_tokens)
             v1, v1_grade = _run(session, llm, embedder, bundle, config, versions, "v1", *tail)
             v2, v2_grade = _run(session, llm, embedder, bundle, config, versions, "v2", *tail)
+            v21, _ = _run(session, llm, embedder, bundle, config, versions, "v2.1", *tail)
             record = saved[(bundle.scenario.id, config, 1)]
             model = record.model
             reused += sum(len(i.attempts) for i in v1.items)
             entries = {m.target_field: m for m in bundle.answer_key.mappings}
             was = {f.grade.target_field: f for f in record.fields}
-            for item1, item2, g1, g2 in zip(
-                v1.items, v2.items, v1_grade.fields, v2_grade.fields, strict=True
+            for item1, item2, item3, g1, g2 in zip(
+                v1.items, v2.items, v21.items, v1_grade.fields, v2_grade.fields, strict=True
             ):
                 saved_field = was[item1.target_field]
                 checked += 1
@@ -165,6 +171,9 @@ def rescore(
                     reproduced += 1
                 assert g1.fully_correct == g2.fully_correct, "the mappings must be identical"
                 reviews = {"v1": item1.review_status.value, **_policy_reviews(item2)}
+                reviews["v2_1"] = item3.review_status.value
+                assert reviews["v2_1"] == reviews["v2_truncation"], "v2.1 is the truncation policy"
+                assert item3.confidence == item2.confidence
                 pairs.append(
                     FieldPair(
                         scenario_id=bundle.scenario.id,
@@ -183,6 +192,7 @@ def rescore(
                             "v1": item1.confidence,
                             "v2": item2.confidence,
                             "v2_truncation": item2.confidence,
+                            "v2_1": item3.confidence,
                             "v2_collapse": item2.confidence,
                             "v2_all_lossy": item2.confidence,
                         },
@@ -208,6 +218,11 @@ def main(
     parser.add_argument("--database-url")
     parser.add_argument("--doc", type=Path, default=DOC, help="report to splice the section into")
     parser.add_argument("--scenarios", nargs="*")
+    parser.add_argument(
+        "--refresh-v2",
+        action="store_true",
+        help="also regenerate the v2 section (by default an existing v2 section is left as it is)",
+    )
     args = parser.parse_args(argv)
     settings = get_settings()
     store_dir = _store_dir("groq", settings.groq_model, args.store_dir)
@@ -240,10 +255,13 @@ def main(
             file=sys.stderr,
         )
         return 1
-    section = render_v2_section(pairs, meta)
     existing = args.doc.read_text(encoding="utf-8")
-    args.doc.write_text(splice_section(existing, section), encoding="utf-8", newline="\n")
-    print(f"wrote the v2 section into {args.doc}")
+    updated = existing
+    if args.refresh_v2 or V2_START not in existing:
+        updated = splice_section(updated, render_v2_section(pairs, meta))
+    updated = splice_block(updated, render_v21_section(pairs, meta), V21_START, V21_END)
+    args.doc.write_text(updated, encoding="utf-8", newline="\n")
+    print(f"wrote the v2 and v2.1 sections into {args.doc}")
     return 0
 
 
