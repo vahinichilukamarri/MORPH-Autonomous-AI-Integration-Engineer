@@ -152,6 +152,23 @@ jobs:
         run: |
           uv sync
           uv run pytest -m docker -q -p no:cacheprovider
+      - name: Explain a sandbox limit failure
+        if: failure()
+        working-directory: backend
+        run: |
+          uv run python - <<'PY'
+          import subprocess
+          from app.codegen.sandbox import LimitsNotEnforced, SandboxRunner
+          info = subprocess.run(
+              ["docker", "info", "--format", "cgroup={{.CgroupVersion}} swaplimit={{.SwapLimit}} {{.SecurityOptions}}"],
+              capture_output=True, text=True, check=False,
+          ).stdout.strip()
+          try:
+              SandboxRunner().verify_limits()
+              print("::notice title=sandbox limits::all limits verified")
+          except LimitsNotEnforced as error:
+              print("::error title=sandbox limits are not enforced::" + " ".join(f"{error} | docker: {info}".split())[:1500])
+          PY
       - name: Oracle against condition D
         working-directory: bench
         run: |
