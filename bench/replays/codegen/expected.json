@@ -1,0 +1,196 @@
+[
+  {
+    "blocked_reasons": [
+      "model output invalid: omit_if_null_fields: 'externalRef' is not optional and non-nullable; omit_if_null_fields: 'phoneNumb"
+    ],
+    "calls": 2,
+    "condition": "L1",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "approved",
+    "input_tokens": 8781,
+    "output_tokens": 2092,
+    "reasoning_tokens": 674,
+    "scenario_id": "crm_customer_to_support_user",
+    "status": "LLM_INVALID"
+  },
+  {
+    "blocked_reasons": [],
+    "calls": 1,
+    "condition": "L2",
+    "gate": {
+      "ast": false
+    },
+    "gate_findings": [
+      "ast: SUPPRESSION lint and type suppression comments",
+      "ast: DUNDER_ACCESS attribute '__cause__'"
+    ],
+    "input_set": "approved",
+    "input_tokens": 4002,
+    "output_tokens": 1859,
+    "reasoning_tokens": 382,
+    "scenario_id": "crm_customer_to_support_user",
+    "status": "GATE_FAILED"
+  },
+  {
+    "blocked_reasons": [
+      "accountState: NEEDS_REVIEW",
+      "tier: NEEDS_REVIEW"
+    ],
+    "calls": 0,
+    "condition": "L1",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "as_proposed",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_tokens": 0,
+    "scenario_id": "crm_customer_to_support_user",
+    "status": "BLOCKED_PENDING_REVIEW"
+  },
+  {
+    "blocked_reasons": [
+      "accountState: NEEDS_REVIEW",
+      "tier: NEEDS_REVIEW"
+    ],
+    "calls": 0,
+    "condition": "L2",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "as_proposed",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_tokens": 0,
+    "scenario_id": "crm_customer_to_support_user",
+    "status": "BLOCKED_PENDING_REVIEW"
+  },
+  {
+    "blocked_reasons": [
+      "model output invalid: target: there is no PATCH by id at '/users/{userId}'; omit_if_null_fields: 'externalRef' is not opti"
+    ],
+    "calls": 2,
+    "condition": "L1",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "approved",
+    "input_tokens": 8792,
+    "output_tokens": 2071,
+    "reasoning_tokens": 665,
+    "scenario_id": "crm_v2_to_support_v2",
+    "status": "LLM_INVALID"
+  },
+  {
+    "blocked_reasons": [],
+    "calls": 1,
+    "condition": "L2",
+    "gate": {
+      "ast": false
+    },
+    "gate_findings": [
+      "ast: SYNTAX unmatched '}' (integration/sync.py, line 177)"
+    ],
+    "input_set": "approved",
+    "input_tokens": 4008,
+    "output_tokens": 1773,
+    "reasoning_tokens": 265,
+    "scenario_id": "crm_v2_to_support_v2",
+    "status": "GATE_FAILED"
+  },
+  {
+    "blocked_reasons": [
+      "accountState: NEEDS_REVIEW",
+      "serviceTier: NEEDS_REVIEW"
+    ],
+    "calls": 0,
+    "condition": "L1",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "as_proposed",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_tokens": 0,
+    "scenario_id": "crm_v2_to_support_v2",
+    "status": "BLOCKED_PENDING_REVIEW"
+  },
+  {
+    "blocked_reasons": [
+      "accountState: NEEDS_REVIEW",
+      "serviceTier: NEEDS_REVIEW"
+    ],
+    "calls": 0,
+    "condition": "L2",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "as_proposed",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_tokens": 0,
+    "scenario_id": "crm_v2_to_support_v2",
+    "status": "BLOCKED_PENDING_REVIEW"
+  },
+  {
+    "blocked_reasons": [],
+    "calls": 2,
+    "condition": "L1",
+    "gate": {
+      "ast": false
+    },
+    "gate_findings": [
+      "ast: SECRET_LITERAL string looks like a secret or token",
+      "ast: SECRET_LITERAL string looks like a secret or token"
+    ],
+    "input_set": "approved",
+    "input_tokens": 8690,
+    "output_tokens": 1964,
+    "reasoning_tokens": 600,
+    "scenario_id": "support_user_to_crm_customer",
+    "status": "GATE_FAILED"
+  },
+  {
+    "blocked_reasons": [],
+    "calls": 1,
+    "condition": "L2",
+    "gate": {
+      "ast": false
+    },
+    "gate_findings": [
+      "ast: SYNTAX unmatched '}' (integration/sync.py, line 145)"
+    ],
+    "input_set": "approved",
+    "input_tokens": 3951,
+    "output_tokens": 1526,
+    "reasoning_tokens": 168,
+    "scenario_id": "support_user_to_crm_customer",
+    "status": "GATE_FAILED"
+  },
+  {
+    "blocked_reasons": [
+      "segment: UNRESOLVED"
+    ],
+    "calls": 0,
+    "condition": "L1",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "as_proposed",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_tokens": 0,
+    "scenario_id": "support_user_to_crm_customer",
+    "status": "BLOCKED_PENDING_REVIEW"
+  },
+  {
+    "blocked_reasons": [
+      "segment: UNRESOLVED"
+    ],
+    "calls": 0,
+    "condition": "L2",
+    "gate": {},
+    "gate_findings": [],
+    "input_set": "as_proposed",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "reasoning_tokens": 0,
+    "scenario_id": "support_user_to_crm_customer",
+    "status": "BLOCKED_PENDING_REVIEW"
+  }
+]
