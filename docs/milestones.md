@@ -424,6 +424,123 @@ record; the same source key twice in one run writes once; a created_at that is n
 string or not a string fails that record (for S3, where created_at is not writable and so not
 read, the record must sync normally). Expected values are hand-written in the fixtures.
 
+D bugs found and fixed, and **how each was found** (the oracle itself caught one of them):
+
+1. **Identity semantics, found by reviewing the fixtures against the answer key** (before any
+   oracle run). The sync engine created CRM customers for users without `externalRef` by matching
+   on email, which the reviewed answer key forbids (an id is never invented). Fixed: a mapped
+   target identity that is null is `NOT_SYNCABLE`; an id the CRM does not have cannot be created.
+2. **A missing source identity field reported as "no id" instead of contract drift, found by a
+   runtime unit test** (before the oracle existed). Fixed: absent is drift, null is
+   `NOT_SYNCABLE`.
+3. **A missing required target field treated as null, which half-applied a record** (new name and
+   email, old phone, under CRM v2). **The only one caught by a failing oracle run** (O7, S3).
+   Fixed in the runtime and the generator: required response fields are derived from discovery
+   and an absent one is `CONTRACT_DRIFT` before any write.
+4. **The bundle mount was unreadable to the sandbox user on a Linux host, found by CI** (the
+   limits verification refused to run anything). Fixed: bundles are made world-readable and never
+   writable, and a test checks that no bundle holds a secret or environment value.
+
+The oracle's design also forced the other changes recorded here (time bounds that guarantee a
+clean end inside the sandbox limit, the `KEYS` mode for a source that cannot be listed).
+
+### Frozen before the first real run
+
+Prompt templates v1 and the confidence constants are frozen (a test enforces it). Any change
+after the first real run is prompt v2 or confidence formula v2 and appears in
+`docs/mapping-eval.md` as a separate labelled run set.
+
+### Recorded results
+
+The first real run (N=1, prompt v1 / confidence-v1, `openai/gpt-oss-120b` on Groq) is in
+`docs/mapping-eval.md`. It is generated from the saved run results; read it there rather than
+here. The scenario 1 responses of that run are the replay fixtures CI uses.
+
+### Validator v2 rescoring (post-hoc)
+
+Re-score the saved v1 responses with validator v2. Makes no LLM calls and leaves the v1 report
+text above it byte-identical; it only appends or replaces the v2 section:
+
+```powershell
+./scripts/dev.ps1 up
+cd bench
+$env:EMBEDDING_CACHE_DIR = (Resolve-Path ../.cache/fastembed).Path
+uv run --group embeddings python -m scripts.rescore_v2
+cd ..
+git diff --stat docs/mapping-eval.md
+```
+
+
+## v0.4-codegen
+
+Turns reviewed mappings into a working integration that runs only in a Docker sandbox and is
+graded by a hidden, hand-written oracle. Design: `docs/codegen.md` (what is generated, the
+review gate, sync behaviour, known limitations), `docs/sandbox.md` (limits, threat model and the
+containment evidence), `docs/oracle.md` (categories, scoring, how it stays hidden).
+
+### What exists
+
+| Area | Where |
+|---|---|
+| Trusted runtime (HTTP, retry, paging, report, sync engine) | `sandbox/runtime/morph_runtime/` |
+| Sandbox image, gate configuration | `sandbox/Dockerfile`, `sandbox/gate/` |
+| Compiler, operation analysis, review gate, strategy, bundle, service, API | `backend/app/codegen/`, `backend/app/api/integrations.py` |
+| Static gate (AST, ruff, mypy) and sandbox runner | `backend/app/codegen/gate.py`, `gate_tools.py`, `sandbox.py` |
+| L1 (strategy) and L2 (sync module) conditions, frozen prompts | `backend/app/codegen/llm_codegen.py`, `backend/app/codegen/prompts/v1/` |
+| Migration `0005` (integrations, versions, files, gate results, sandbox runs) | `backend/alembic/versions/0005_integrations.py` |
+| Mock admin API (state, request log, counters, deterministic faults) | `mock_systems/common/faults.py` |
+| Oracle (fixtures, harness, tests), pinned in the manifest | `bench/oracle/`, `bench/morph_bench/oracle/` |
+| Evaluation script and report | `bench/scripts/run_codegen_eval.py`, `docs/codegen-eval.md` |
+
+### Run and verify (PowerShell, from the repo root; needs Docker and the dev Postgres)
+
+```powershell
+docker compose up -d --wait postgres
+./scripts/dev.ps1 sandbox-build        # builds morph-sandbox:dev and morph-sbx-mock:dev (labelled)
+./scripts/dev.ps1 lint
+./scripts/dev.ps1 test                 # includes the runtime library tests; no Docker needed
+./scripts/dev.ps1 sandbox-test         # containment corpus, gate tools, generated tests (about 5 min)
+./scripts/dev.ps1 oracle               # the oracle against condition D (about 17 min)
+./scripts/dev.ps1 codegen-eval --conditions D
+```
+
+Nothing here calls a model. L1 and L2 with a real model need `--confirm-real-run` and are run
+only after an explicit go (Checkpoint D); CI uses scripted or replayed providers only.
+
+### Oracle result (condition D, approved mappings)
+
+One complete run, 413 checks, no failures. Real counts per scenario (passed/total):
+
+| | O1 | O2 | O3 | O4 | O5 | O6 | O7 | O8 | all |
+|---|---|---|---|---|---|---|---|---|---|
+| S1 | 18/18 | 19/19 | 11/11 | 20/20 | 29/29 | 37/37 | 5/5 | 4/4 | 143/143 |
+| S3 | 17/17 | 19/19 | 11/11 | 9/9 | 29/29 | 33/33 | 5/5 | 4/4 | 127/127 |
+| S4 | 18/18 | 19/19 | 11/11 | 20/20 | 29/29 | 37/37 | 5/5 | 4/4 | 143/143 |
+
+By revision: 301 checks from the first oracle version (r0), 14 revised after the first D run
+(r1-fix) and 98 added after it (r1-new). S3 skips O4 at 100 and 250 keys by design (sizes 0, 1
+and 101 are used). **The oracle was revised after D had been run against it**, so this table
+is not a blind result; the revision is disclosed below. The committed evaluation report is
+`docs/codegen-eval.md`.
+
+### Oracle revision r1 (post-hoc), and what the oracle and its design found in D
+
+After the first complete D run (5 failed tests out of 57) the oracle was revised, with every
+decision made by the project owner, who asked that no expectation other than these be changed:
+
+| Failing check | Whose fault | Oracle change (before -> after) |
+|---|---|---|
+| O5 `http_500_on_source` (S1, S4): "no fault seen" | oracle: the source gets one request and a 30% seeded fault never fired | probabilistic seed -> the mock fails the **first** request deterministically; injection is now proven from the mock's own fault counter for the 500 and malformed-JSON cases |
+| O7 `no_request_reaches_the_target` (S1, S4) | oracle harness: a request hung by the previous test's timeout fault was logged into the next test's window (a 504 `GET` logged 33 s after it began) | `seed()` now waits until neither mock has a request in flight (counter, not request-start logging) |
+| O7 S3 target drift: `at_least_one_record_failed`, `run_does_not_crash` | oracle over-specified (and D had a bug, below) | replaced by: ends `CONTRACT_DRIFT`, exit code 2, and no write beyond the records reported before the drift; the "each record fully old or fully new" check is unchanged |
+
+Also fixed after the fact: a missing S3 fixture quote (YAML syntax, no value changed) and a
+lookup-table omission in my own r1 edit that made the 429 test error before checking anything.
+Added after the first D run (`r1-new`): an unknown enum value from the source fails only that
+record; the same source key twice in one run writes once; a created_at that is not an ISO
+string or not a string fails that record (for S3, where created_at is not writable and so not
+read, the record must sync normally). Expected values are hand-written in the fixtures.
+
 D bugs found and fixed, stated precisely about how each was found:
 
 1. **Identity semantics (found while writing the S3 fixture, before any oracle run).** The sync
@@ -453,3 +570,17 @@ introduce `v2` and report it as a separate, labelled run; do not retune on the s
 See `docs/codegen.md`. Notably: **S3 is update-only** (ids are never invented and the CRM cannot
 create under a chosen id), which supersedes the plan's natural-key creation for S3; Support
 cannot be listed, so a Support source needs operator-supplied ids.
+
+### Real-model run of L1 and L2 (Groq `openai/gpt-oss-120b`, N = 1 per unit)
+
+Real counts, full analysis in `docs/codegen-eval-findings.md`, generated tables in
+`docs/codegen-eval.md`. On the approved inputs of S1, S3 and S4: **D reached a ready,
+oracle-correct integration in 3 of 3; L1 in 0 of 3** (two proposals invalid after the one
+re-ask, one rejected by the AST gate) **and L2 in 0 of 3** (all rejected by the AST stage, so
+nothing reached ruff, mypy, the sandbox or the oracle). The six as-proposed units blocked before
+any model call (zero calls). Nine model calls in total, 38,224 input and 11,285 output tokens
+(2,754 of them reasoning), no HTTP 400, no rate-limit stop. Part of the failures trace to our own
+frozen design (the L2 prompt told the model to use `error.__cause__`, which the gate bans; the
+L1 `omit_if_null` rule; the gate's long-identifier rule flagged benign test data); fixing them
+would be a separately labelled `codegen-v2` run. The real replies are committed in
+`bench/replays/codegen/` and replayed in CI with no network.
