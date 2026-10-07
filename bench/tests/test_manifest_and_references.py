@@ -31,8 +31,12 @@ def test_manifest_covers_every_scenario_key_and_reference() -> None:
 
 @pytest.fixture
 def copy_of_bench(tmp_path: Path) -> Path:
-    for folder in ("scenarios", "references"):
-        shutil.copytree(BENCH / folder, tmp_path / folder)
+    for folder in ("scenarios", "references", "oracle", "morph_bench/oracle"):
+        shutil.copytree(
+            BENCH / folder,
+            tmp_path / folder,
+            ignore=shutil.ignore_patterns("__pycache__", ".cache", "*.pyc"),
+        )
     return tmp_path
 
 
@@ -112,3 +116,14 @@ def test_unresolved_entries_have_no_reference_pipeline() -> None:
             if m.mapping_type is MappingType.UNRESOLVED
         }
         assert unresolved.isdisjoint(_reference(bundle.scenario.id))
+
+
+def test_the_oracle_is_pinned_and_a_change_to_it_is_detected(copy_of_bench: Path) -> None:
+    names = set(manifest.read())
+    assert "oracle/fixtures/support_user_to_crm_customer.yaml" in names
+    assert "oracle/test_oracle.py" in names and "morph_bench/oracle/world.py" in names
+    manifest_path = copy_of_bench / "scenarios" / "MANIFEST.sha256"
+    fixture = copy_of_bench / "oracle" / "fixtures" / "crm_customer_to_support_user.yaml"
+    fixture.write_text(fixture.read_text(encoding="utf-8") + "\n# edited\n", encoding="utf-8")
+    problems = manifest.verify(copy_of_bench, manifest_path)
+    assert problems == ["changed: oracle/fixtures/crm_customer_to_support_user.yaml"]

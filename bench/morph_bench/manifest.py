@@ -1,4 +1,4 @@
-"""Checksum manifest of the hand-written fixtures (scenarios, answer keys, reference pipelines).
+"""Checksum manifest of the hand-written fixtures (scenarios, answer keys, references, oracle).
 
 Answer keys are ground truth. Any change to them must be deliberate, so their SHA-256 sums are
 committed in ``scenarios/MANIFEST.sha256`` and a test fails when a file differs. Updating the
@@ -14,7 +14,15 @@ from pathlib import Path
 
 BENCH_DIR = Path(__file__).resolve().parents[1]
 MANIFEST = BENCH_DIR / "scenarios" / "MANIFEST.sha256"
-FIXTURE_GLOBS = ("scenarios/*/scenario.yaml", "scenarios/*/answer_key.yaml", "references/*.yaml")
+FIXTURE_GLOBS = (
+    "scenarios/*/scenario.yaml",
+    "scenarios/*/answer_key.yaml",
+    "references/*.yaml",
+    # the hidden oracle: fixtures with hand-written expected values, the tests, and the harness
+    "oracle/fixtures/*.yaml",
+    "oracle/*.py",
+    "morph_bench/oracle/*.py",
+)
 
 
 def _digest(path: Path) -> str:
