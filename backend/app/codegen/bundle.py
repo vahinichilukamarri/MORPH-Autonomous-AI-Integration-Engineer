@@ -56,6 +56,7 @@ def input_hash(inp: CodegenInput, condition: str, *, allow_partial: bool) -> str
                 "source": [inp.source.spec_hash, inp.source_entity],
                 "target": [inp.target.spec_hash, inp.target_entity],
                 "fields": fields,
+                "samples": sha256_text(canonical(list(inp.samples))),
             }
         )
     )

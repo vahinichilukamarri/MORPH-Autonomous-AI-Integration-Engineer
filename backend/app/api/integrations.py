@@ -9,12 +9,28 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.codegen.inputs import InputError
-from app.codegen.service import CONDITIONS, GenerationError, generate
+from app.codegen.sandbox import SandboxError, SandboxRunner
+from app.codegen.service import (
+    CONDITIONS,
+    GenerationError,
+    generate,
+    run_generated_tests,
+)
 from app.db import get_session
 from app.db_models import Integration, IntegrationVersion
+from app.settings import Settings, get_settings
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 SessionDep = Annotated[Session, Depends(get_session)]
+SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+
+def get_runner() -> SandboxRunner:
+    """FastAPI dependency: the sandbox runner (needs Docker and the sandbox image)."""
+    return SandboxRunner()
+
+
+RunnerDep = Annotated[SandboxRunner, Depends(get_runner)]
 
 
 class GenerateRequest(BaseModel):
@@ -109,11 +125,17 @@ def _version(session: Session, integration_id: int, number: int) -> IntegrationV
 
 
 @router.post("", response_model=VersionOut, status_code=201)
-def create_integration(body: GenerateRequest, session: SessionDep) -> VersionOut:
+def create_integration(
+    body: GenerateRequest, session: SessionDep, settings: SettingsDep
+) -> VersionOut:
     """Generate (or reuse) an integration version from a mapping run, then gate it."""
     try:
         version = generate(
-            session, body.mapping_run_id, condition=body.condition, allow_partial=body.allow_partial
+            session,
+            body.mapping_run_id,
+            condition=body.condition,
+            allow_partial=body.allow_partial,
+            samples_dir=settings.samples_dir,
         )
     except InputError as error:
         raise HTTPException(404, str(error)) from error
@@ -171,3 +193,22 @@ def get_sandbox_runs(integration_id: int, number: int, session: SessionDep) -> l
         )
         for r in version.sandbox_runs
     ]  # fmt: skip
+
+
+@router.post("/{integration_id}/versions/{number}/run-tests", response_model=SandboxRunOut)
+def run_tests(
+    integration_id: int, number: int, session: SessionDep, runner: RunnerDep
+) -> SandboxRunOut:
+    """Run the generated tests in the sandbox. Reported separately from the oracle."""
+    version = _version(session, integration_id, number)
+    try:
+        row = run_generated_tests(session, version, runner)
+    except GenerationError as error:
+        raise HTTPException(409, str(error)) from error
+    except SandboxError as error:
+        raise HTTPException(503, f"sandbox unavailable: {error}") from error
+    session.commit()
+    return SandboxRunOut(
+        id=row.id, purpose=row.purpose, outcome=row.outcome, exit_code=row.exit_code,
+        duration_s=row.duration_s, result=row.result,
+    )  # fmt: skip

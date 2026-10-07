@@ -14,7 +14,6 @@ from enum import StrEnum
 from pathlib import PurePosixPath
 
 GATE_VERSION = "1"
-LOCAL_PACKAGE = "integration"
 
 ALLOWED_MODULES = frozenset(
     {"typing", "dataclasses", "re", "datetime", "json", "enum", "collections.abc", "__future__"}
@@ -134,9 +133,9 @@ class _Checker(ast.NodeVisitor):
         if not _module_allowed(module, self.local):
             self._add(node, Rule.IMPORT_NOT_ALLOWED, f"import from {module!r}")
             return
-        if module == LOCAL_PACKAGE:
+        if module in self.local and any(m.startswith(module + ".") for m in self.local):
             for alias in node.names:
-                if f"{LOCAL_PACKAGE}.{alias.name}" not in self.local:
+                if f"{module}.{alias.name}" not in self.local:
                     self._add(node, Rule.IMPORT_NOT_ALLOWED, f"{alias.name!r} is not in the bundle")
 
     # names and attributes
@@ -207,12 +206,16 @@ class _Checker(ast.NodeVisitor):
 
 
 def _bundle_modules(files: Mapping[str, str]) -> frozenset[str]:
-    modules = {LOCAL_PACKAGE}
+    """Every importable module of the bundle, as dotted names (packages included)."""
+    modules: set[str] = set()
     for path in files:
         pure = PurePosixPath(path)
-        if pure.suffix == ".py" and pure.parts[0] == LOCAL_PACKAGE:
-            stem = ".".join((*pure.parts[:-1], pure.stem))
-            modules.add(stem if pure.stem != "__init__" else ".".join(pure.parts[:-1]))
+        if pure.suffix != ".py" or len(pure.parts) < 2:
+            continue
+        package = ".".join(pure.parts[:-1])
+        modules.add(package)
+        if pure.stem != "__init__":
+            modules.add(f"{package}.{pure.stem}")
     return frozenset(modules)
 
 

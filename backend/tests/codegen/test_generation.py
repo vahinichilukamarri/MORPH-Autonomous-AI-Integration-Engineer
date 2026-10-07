@@ -148,3 +148,25 @@ def test_generated_code_never_contains_secrets_or_urls() -> None:
     text = "\n".join(files.values())
     assert "http://" not in text and "https://" not in text
     assert 'env("MORPH_SOURCE_CREDENTIAL")' in text and "ApiKeyAuth('X-API-Key'" in text
+
+
+def test_generated_tests_embed_the_dsl_results_for_the_sample_records() -> None:
+    from app.codegen.generated_tests import expected_for, render_tests
+
+    inp = s1_input()
+    plan = analyse(inp.source, inp.source_entity, inp.target, inp.target_entity)
+    decision = decide(inp, plan, allow_partial=False)
+    files = render_tests(decision.included, inp.samples)
+    assert inp.samples, "the committed sample records must be found"
+    assert set(files) == {
+        "tests_generated/__init__.py",
+        "tests_generated/__main__.py",
+        "tests_generated/cases.py",
+    }
+    namespace: dict[str, object] = {}
+    exec(compile(files["tests_generated/cases.py"], "<cases>", "exec"), namespace)  # noqa: S102
+    cases = namespace["CASES"]
+    assert isinstance(cases, list) and len(cases) == len(inp.samples)
+    assert cases[0]["expected"] == expected_for(decision.included, dict(inp.samples[0]))
+    package = generate_package(inp, plan, decision)
+    assert check_ast({**package.files, **files}).passed

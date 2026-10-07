@@ -5,6 +5,7 @@ answer keys, reference pipelines or oracle fixtures.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +15,8 @@ from app.discovery.models import SystemModel
 from app.discovery.repository import load_model
 from app.mapping.confidence import ReviewStatus
 from app.mapping.proposal import MappingType
-from app.mapping.transform import Transformation
+from app.mapping.samples import load_samples
+from app.mapping.transform import JsonScalar, Transformation
 
 APPROVED_STATUSES = frozenset(
     {ReviewStatus.AUTO_ACCEPTED, ReviewStatus.APPROVED, ReviewStatus.OVERRIDDEN}
@@ -55,9 +57,12 @@ class CodegenInput:
     fields: tuple[MappedField, ...]
     source_version_id: int | None = None
     target_version_id: int | None = None
+    samples: tuple[dict[str, JsonScalar], ...] = ()
 
 
-def load_input(session: Session, mapping_run_id: int) -> CodegenInput:
+def load_input(
+    session: Session, mapping_run_id: int, samples_dir: Path | None = None
+) -> CodegenInput:
     run = session.get(MappingRun, mapping_run_id)
     if run is None:
         raise InputError(f"mapping run {mapping_run_id} does not exist")
@@ -90,13 +95,20 @@ def load_input(session: Session, mapping_run_id: int) -> CodegenInput:
     for version_id in (run.source_version_id, run.target_version_id):
         if session.get(SystemVersion, version_id) is None:
             raise InputError(f"system version {version_id} does not exist")
+    source_model = load_model(session, run.source_version_id)
+    samples = (
+        tuple(load_samples(run.source_entity, source_model.api_version, samples_dir))
+        if samples_dir is not None
+        else ()
+    )
     return CodegenInput(
         mapping_run_id=run.id,
-        source=load_model(session, run.source_version_id),
+        source=source_model,
         target=load_model(session, run.target_version_id),
         source_entity=run.source_entity,
         target_entity=run.target_entity,
         fields=tuple(fields),
         source_version_id=run.source_version_id,
         target_version_id=run.target_version_id,
+        samples=samples,
     )

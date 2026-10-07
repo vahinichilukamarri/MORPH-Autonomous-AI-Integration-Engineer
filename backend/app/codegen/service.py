@@ -1,5 +1,6 @@
 """Generate, gate and persist an integration version (condition D: deterministic, no LLM)."""
 
+import json
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -16,16 +17,18 @@ from app.codegen.bundle import (
 )
 from app.codegen.gate import GateResult, check_ast
 from app.codegen.gate_tools import run_tool_gate
+from app.codegen.generated_tests import TESTS_PACKAGE, render_tests
 from app.codegen.generator import GENERATOR_VERSION, RUNTIME_VERSION, generate_package
 from app.codegen.inputs import CodegenInput, load_input
 from app.codegen.operations import OperationPlan, PlanError, analyse
 from app.codegen.review_gate import GateDecision, GateStatus, decide
-from app.codegen.sandbox import SandboxRunner
+from app.codegen.sandbox import Outcome, SandboxRunner
 from app.db_models import (
     GateResultRow,
     Integration,
     IntegrationFile,
     IntegrationVersion,
+    SandboxRunRow,
 )
 
 CONDITIONS = ("D",)
@@ -106,7 +109,7 @@ def _persist(
                 integration_version_id=version.id,
                 path=path,
                 sha256=sha256_text(text),
-                kind="generated",
+                kind="test" if path.startswith(f"{TESTS_PACKAGE}/") else "generated",
                 content=text,
             )
         )
@@ -175,21 +178,22 @@ def generate_from_input(
     except PlanError as error:
         return blocked(BLOCKED_UNSUPPORTED, decision, str(error))
 
-    gates = [check_ast(package.files)]
+    files = {**package.files, **render_tests(decision.included, inp.samples)}
+    gates = [check_ast(files)]
     tools: list[GateResult] | None = None
     manifest = build_manifest(
         inp, condition=condition, status=GENERATED, decision=decision, strategy=package.strategy,
-        files=package.files,
+        files=files,
     )  # fmt: skip
     if gates[0].passed and runner is not None:
         with tempfile.TemporaryDirectory(prefix="morph-gate-") as tmp:
-            write_bundle(Path(tmp), package.files, manifest)
+            write_bundle(Path(tmp), files, manifest)
             tools = run_tool_gate(runner, Path(tmp))
         gates.extend(tools)
     partial = decision.status is GateStatus.PARTIAL
     status = _status_after_gates(partial, gates[0].passed, tools)
     return _persist(
-        session, integration, inp, status=status, in_hash=in_hash, files=package.files,
+        session, integration, inp, status=status, in_hash=in_hash, files=files,
         manifest=manifest, gates=gates,
     )  # fmt: skip
 
@@ -201,10 +205,11 @@ def generate(
     condition: str = "D",
     allow_partial: bool = False,
     runner: SandboxRunner | None = None,
+    samples_dir: Path | None = None,
 ) -> IntegrationVersion:
     return generate_from_input(
         session,
-        load_input(session, mapping_run_id),
+        load_input(session, mapping_run_id, samples_dir),
         condition=condition,
         allow_partial=allow_partial,
         runner=runner,
@@ -217,3 +222,37 @@ def materialize(version: IntegrationVersion, directory: Path) -> Path:
     if not files:
         raise GenerationError(f"version {version.version} has no code ({version.status})")
     return write_bundle(directory, files, version.manifest)
+
+
+def run_generated_tests(
+    session: Session, version: IntegrationVersion, runner: SandboxRunner
+) -> SandboxRunRow:
+    """Run the generated tests in the sandbox (no network) and store the result."""
+    if version.status not in RUNNABLE:
+        raise GenerationError(
+            f"version {version.version} has not passed the gate ({version.status})"
+        )
+    with tempfile.TemporaryDirectory(prefix="morph-tests-") as tmp:
+        bundle = materialize(version, Path(tmp))
+        result = runner.run(bundle, ["python", "-E", "-s", "-B", "-m", TESTS_PACKAGE], network=None)
+    parsed: dict[str, Any] | None = None
+    if result.outcome in (Outcome.OK, Outcome.NONZERO):
+        try:
+            loaded = json.loads(result.stdout.strip().splitlines()[-1])
+            parsed = loaded if isinstance(loaded, dict) else None
+        except (ValueError, IndexError):
+            parsed = None
+    row = SandboxRunRow(
+        integration_version_id=version.id,
+        purpose="generated_tests",
+        limits=runner.limits.as_dict(),
+        outcome=result.outcome.value,
+        exit_code=result.exit_code,
+        duration_s=result.duration_s,
+        stdout_excerpt=result.stdout[:4000],
+        stderr_excerpt=result.stderr[:4000],
+        result=parsed,
+    )
+    session.add(row)
+    session.flush()
+    return row

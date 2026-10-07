@@ -13,9 +13,11 @@ from app.discovery.parser import parse_spec
 from app.discovery.repository import ingest
 from app.mapping.confidence import ReviewStatus
 from app.mapping.proposal import MappingType
+from app.mapping.samples import load_samples
 from app.mapping.transform import Transformation
 
 ROOT = Path(__file__).resolve().parents[3] / "mock_systems" / "openapi"
+SAMPLES = Path(__file__).resolve().parents[3] / "mock_systems" / "samples"
 
 
 def model(file: str, name: str):  # type: ignore[no-untyped-def]
@@ -117,6 +119,7 @@ def s1_input(fields: tuple[MappedField, ...] | None = None) -> CodegenInput:
         source_entity="Customer",
         target_entity="User",
         fields=fields if fields is not None else mapped(S1_PIPELINES),
+        samples=tuple(load_samples("Customer", "1", SAMPLES)),
     )
 
 
@@ -132,6 +135,7 @@ def s3_input(fields: tuple[MappedField, ...] | None = None) -> CodegenInput:
         source_entity="User",
         target_entity="Customer",
         fields=fields if fields is not None else default,
+        samples=tuple(load_samples("User", "1", SAMPLES)),
     )
 
 
