@@ -42,6 +42,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 strict = true
 plugins = ["pydantic.mypy"]
+mypy_path = "../sandbox/runtime"
 files = ["app", "tests"]
 
 [[tool.mypy.overrides]]
@@ -50,6 +51,6 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "../sandbox/runtime"]
 addopts = "-m 'not slow'"
 markers = ["slow: needs the real embedding model (downloads it); run with `pytest -m slow`"]
