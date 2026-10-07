@@ -510,3 +510,58 @@ def test_records_from_before_the_usage_fields_still_load(tmp_path: Path) -> None
         .metadata
     )
     assert meta.usage is None and meta.total_tokens is None
+
+
+# ---- finish reason -----------------------------------------------------------------------------
+
+
+def _chat_with_finish(text: str, finish: str | None) -> httpx.Response:
+    choice: dict[str, Any] = {"message": {"content": text}}
+    if finish is not None:
+        choice["finish_reason"] = finish
+    return httpx.Response(
+        200,
+        json={"model": "m", "choices": [choice], "usage": {"prompt_tokens": 1}},
+        headers={"content-type": "application/json"},
+    )
+
+
+def test_groq_records_the_finish_reason_including_a_truncation() -> None:
+    cut = Recorder(lambda n, r: _chat_with_finish('{"value": 7, "lab', "length"), ("m",))
+    result = cut.provider("m").complete_structured(REQUEST, Answer, reask=False)
+    assert result.value is None
+    assert result.attempts[0].metadata.finish_reason == "length"
+    done = Recorder(lambda n, r: _chat_with_finish(GOOD, "stop"), ("m",))
+    assert (
+        done.provider("m").complete_structured(REQUEST, Answer).attempts[0].metadata.finish_reason
+        == "stop"
+    )
+    absent = Recorder(lambda n, r: _chat_with_finish(GOOD, None), ("m",))
+    assert (
+        absent.provider("m").complete_structured(REQUEST, Answer).attempts[0].metadata.finish_reason
+        is None
+    )
+
+
+def test_finish_reason_survives_the_record_cache_and_replay_round_trip(tmp_path: Path) -> None:
+    rec = Recorder(lambda n, r: _chat_with_finish(GOOD, "stop"), ("m",))
+    cache = CachingProvider(
+        rec.provider("m"), ResponseStore(tmp_path), record_file=tmp_path / "r.jsonl"
+    )
+    cache.complete_structured(REQUEST, Answer)
+    replayed = ReplayLLMProvider(ResponseStore(tmp_path / "r.jsonl"))
+    assert (
+        replayed.complete_structured(REQUEST, Answer).attempts[0].metadata.finish_reason == "stop"
+    )
+
+
+def test_ollama_done_reason_is_the_finish_reason() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"model": "m", "message": {"content": GOOD}, "done_reason": "length"}
+        )
+
+    provider = OllamaProvider("http://ollama.test", "m", transport=httpx.MockTransport(handler))
+    assert (
+        provider.complete_structured(REQUEST, Answer).attempts[0].metadata.finish_reason == "length"
+    )

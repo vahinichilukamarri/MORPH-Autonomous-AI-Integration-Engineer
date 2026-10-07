@@ -1,4 +1,4 @@
-"""Migration 0006: the full usage block and total_tokens are stored per call, nullable."""
+"""Migrations 0006 and 0007: usage, total_tokens and finish_reason are stored per call."""
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -21,15 +21,15 @@ def test_usage_block_and_total_tokens_round_trip(session: Session) -> None:
         "total_tokens": 160,
         "completion_tokens_details": {"reasoning_tokens": 25},
     }
-    session.add(_call(total_tokens=160, usage=block))
+    session.add(_call(total_tokens=160, usage=block, finish_reason="length"))
     session.flush()
     session.expire_all()
     row = session.scalars(select(LLMCall)).one()
-    assert row.total_tokens == 160 and row.usage == block
+    assert row.total_tokens == 160 and row.usage == block and row.finish_reason == "length"
 
 
 def test_both_columns_are_optional(session: Session) -> None:
     session.add(_call())
     session.flush()
     row = session.scalars(select(LLMCall)).one()
-    assert row.total_tokens is None and row.usage is None
+    assert row.total_tokens is None and row.usage is None and row.finish_reason is None

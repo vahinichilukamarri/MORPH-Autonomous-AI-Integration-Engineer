@@ -92,6 +92,7 @@ class CallMetadata:
     reasoning_tokens: int | None = None
     total_tokens: int | None = None
     usage: dict[str, Any] | None = None  # the provider's own usage block, unmodified
+    finish_reason: str | None = None  # the provider's own value, e.g. "stop" or "length"
     outcome: Outcome = Outcome.OK
     source: Source = "network"
     http_attempts: int = 1

@@ -36,6 +36,7 @@ class Recorded:
     latency_ms: int
     total_tokens: int | None = None
     usage: dict[str, Any] | None = None
+    finish_reason: str | None = None
 
 
 class ResponseStore:
@@ -82,6 +83,7 @@ def _completion(record: Recorded, source: str) -> RawCompletion:
         reasoning_tokens=record.reasoning_tokens,
         total_tokens=record.total_tokens,
         usage=record.usage,
+        finish_reason=record.finish_reason,
         source=source,  # type: ignore[arg-type]
     )
     return RawCompletion(text=record.text, metadata=metadata)
@@ -142,6 +144,7 @@ class CachingProvider(BaseLLMProvider):
                 latency_ms=meta.latency_ms,
                 total_tokens=meta.total_tokens,
                 usage=meta.usage,
+                finish_reason=meta.finish_reason,
             ),
             file=self._record_file,
         )

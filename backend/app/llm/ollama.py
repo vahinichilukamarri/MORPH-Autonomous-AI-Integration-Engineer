@@ -62,5 +62,6 @@ class OllamaProvider(BaseLLMProvider):
             latency_ms=int((time.monotonic() - started) * 1000),
             input_tokens=payload.get("prompt_eval_count"),
             output_tokens=payload.get("eval_count"),
+            finish_reason=payload.get("done_reason"),
         )
         return RawCompletion(text=payload.get("message", {}).get("content", ""), metadata=metadata)

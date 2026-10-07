@@ -177,6 +177,7 @@ class GroqProvider(BaseLLMProvider):
             reasoning_tokens=details.get("reasoning_tokens"),
             total_tokens=usage.get("total_tokens"),
             usage=dict(usage) if usage else None,
+            finish_reason=payload["choices"][0].get("finish_reason"),
             http_attempts=attempts,
             rate_limits={
                 k: v for k, v in response.headers.items() if k.lower().startswith("x-ratelimit")
