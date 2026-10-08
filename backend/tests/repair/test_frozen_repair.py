@@ -22,15 +22,19 @@ from app.repair.prompts import (
     REPAIR_PROMPT_VERSION,
     RepairPromptBuilder,
 )
+from tests.codegen.fixtures import s1_input
 
+# A15 (a pre-first-call change; no real call had been made): the L1 repair echo carries the previous
+# edge records, numbered as the feedback numbers them. The L1 template hash and the rendered L1R
+# hash were re-frozen; the L2 values are unchanged.
 PROMPT_FILE_HASHES = {
-    "l1_repair.md": "a8549f11b3dc4783339e5eba5421cc6534e4dbc72af933b73c130b0a64cf39dc",
+    "l1_repair.md": "bc8cd2f611372be316b55d2525858636ac23caca21ffdf6a65620eaf7b590492",
     "l2_repair.md": "2de93ae7a81c342384591419e0a08d465332192fb042b7ca085c83ca0ebb5a43",
 }
 SMOKE_SCRIPT_HASH = "31310f5418d319dba93cec1e0a55a4dd38a60e038da74014657da45990c2f2b4"
 RENDERED_REPAIR_HASH = {
     "L2R": "1d2f3e7c54e766f6517824a8307e46afb67652d85544f921170e004ed63fd11b",
-    "L1R": "222bc5695cd317494ae17daf106a8e47c7cb49eadfbc55662c3cc1715b039fb8",
+    "L1R": "203534a7ef60de2e5e8400e348c5d96883a074c99e4950c818e0144c16e3610e",
 }
 GRAPH_TOPOLOGY_HASH = "2771b0c400aa20d1e7b866e42d15831bd426c8f1cbabd1c7a44dff5c8357a5ee"
 SAMPLE_FEEDBACK = (
@@ -82,9 +86,11 @@ def test_the_rendered_repair_prompts_are_frozen() -> None:
         attempt=2, previous_output=json.dumps({"notes": "n", "source": "x = 1\n"}),
         feedback=sample_feedback(),
     )  # fmt: skip
+    inp = s1_input()
+    edges = [json.dumps({**inp.samples[0], "customer_id": "C-9001"}), '{"not": "a source record"}']
     l1 = builder.repair(
-        None, None, "L1R",  # type: ignore[arg-type]
-        attempt=1, previous_output=json.dumps({"rationale": "r", "edge_record_json": ["{}"]}),
+        inp, None, "L1R",  # type: ignore[arg-type]
+        attempt=1, previous_output=json.dumps({"rationale": "r", "edge_record_json": edges}),
         feedback=sample_feedback(),
     )  # fmt: skip
     assert l2.fingerprint(SyncModuleProposal) == RENDERED_REPAIR_HASH["L2R"]

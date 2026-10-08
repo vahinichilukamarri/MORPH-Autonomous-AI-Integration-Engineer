@@ -15,7 +15,12 @@ import re
 from pathlib import Path
 
 from app.codegen.inputs import CodegenInput
-from app.codegen.llm_codegen import build_l1_request, build_l2_request
+from app.codegen.llm_codegen import (
+    MAX_EDGE_RECORDS,
+    build_l1_request,
+    build_l2_request,
+    parse_edge_records,
+)
 from app.codegen.review_gate import GateDecision
 from app.llm.base import LLMRequest
 from app.mapping.prompts import BLOCK_CLOSE, BLOCK_OPEN
@@ -45,12 +50,32 @@ def cap(text: str, limit: int = ECHO_CAP_CHARS) -> str:
     return text[:limit].rstrip() + f"\n[truncated: {len(text) - limit} more characters]"
 
 
-def echo_previous(condition: str, previous_output: str) -> str:
+def edge_record_lines(texts: list[str], inp: CodegenInput) -> list[str]:
+    """The previous edge records, numbered the way the feedback numbers them.
+
+    Feedback counts only the records that are valid source records, in order, so a record that was
+    dropped is shown unnumbered with the reason and does not shift the numbers after it.
+    """
+    lines: list[str] = []
+    number = 0
+    for text in texts[:MAX_EDGE_RECORDS]:
+        kept, dropped = parse_edge_records([text], inp)
+        if kept:
+            lines.append(f"edge record {number}: {text}")
+            number += 1
+        else:
+            lines.append(f"not used ({dropped[0]}): {text}")
+    if len(texts) > MAX_EDGE_RECORDS:
+        lines.append(f"[{len(texts) - MAX_EDGE_RECORDS} more edge records ignored]")
+    return lines
+
+
+def echo_previous(condition: str, previous_output: str, inp: CodegenInput) -> str:
     """What the model sees of its own previous reply.
 
-    L2R: the module source alone, as plain text (not JSON-escaped). L1R: the strategy with its edge
-    records replaced by a count. A reply that is not a JSON object is shown as it came. Always
-    capped.
+    L2R: the module source alone, as plain text (not JSON-escaped). L1R: the strategy, then its
+    edge records one per line with the numbers the feedback uses. A reply that is not a JSON object
+    is shown as it came. Always capped.
     """
     try:
         data = json.loads(previous_output)
@@ -62,10 +87,13 @@ def echo_previous(condition: str, previous_output: str) -> str:
         return cap(data["source"])
     if condition == "L1R":
         shown = dict(data)
-        edges = shown.get("edge_record_json")
+        edges = shown.pop("edge_record_json", None)
+        text = json.dumps(shown, indent=2, ensure_ascii=False)
         if isinstance(edges, list):
-            shown["edge_record_json"] = f"[{len(edges)} edge records left out]"
-        return cap(json.dumps(shown, indent=2, ensure_ascii=False))
+            texts = [e if isinstance(e, str) else json.dumps(e) for e in edges]
+            heading = "edge records (numbered as in CHECK_RESULTS):"
+            text += "\n\n" + "\n".join([heading, *edge_record_lines(texts, inp)])
+        return cap(text)
     return cap(previous_output)
 
 
@@ -99,7 +127,7 @@ class RepairPromptBuilder:
             "MAX_ATTEMPTS": str(MAX_REPAIR_ATTEMPTS),
             "ORIGINAL_TASK": text_block("ORIGINAL_TASK", "\n\n".join(original.parts)),
             "PREVIOUS_REPLY": text_block(
-                "PREVIOUS_REPLY", echo_previous(condition, previous_output)
+                "PREVIOUS_REPLY", echo_previous(condition, previous_output, inp)
             ),
             "CHECK_RESULTS": text_block("CHECK_RESULTS", feedback.render()),
         }

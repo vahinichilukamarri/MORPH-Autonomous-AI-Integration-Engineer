@@ -5,6 +5,7 @@ import re
 
 import pytest
 
+from app.codegen.gate import GateResult, Rule, check_ast
 from app.codegen.llm_codegen import (
     StrategyProposal,
     SyncModuleProposal,
@@ -14,7 +15,7 @@ from app.codegen.llm_codegen import (
 )
 from app.llm.base import LLMRequest
 from app.mapping.prompts import BLOCK_CLOSE, BLOCK_OPEN, _neutralise
-from app.repair.feedback import Feedback, FeedbackItem, Stage, build_feedback
+from app.repair.feedback import Feedback, FeedbackItem, Stage, build_feedback, gate_items
 from app.repair.prompts import (
     ECHO_CAP_CHARS,
     PROMPT_DIR,
@@ -29,6 +30,7 @@ from app.repair.prompts import (
 from app.repair.sizing import estimate_request
 from tests.codegen.fixtures import s1_input
 from tests.repair.helpers import Built, s1_built
+from tests.repair.helpers import build as build_bundle
 from tests.repair.support import GOOD, l2_reply
 
 BLOCK = re.compile(re.escape(BLOCK_OPEN.split("{")[0]) + r".*?" + re.escape(BLOCK_CLOSE), re.DOTALL)
@@ -153,7 +155,45 @@ def test_l1r_has_its_own_template(built: Built) -> None:
     previous = json.dumps({"rationale": "r", "edge_record_json": ["{}", "{}"]})
     request = repair(built, "L1R", previous=previous)
     assert "the strategy fields" in outside_the_blocks(request)
-    assert "[2 edge records left out]" in request.parts[0]
+    assert "numbered the way CHECK_RESULTS refers to them" in outside_the_blocks(request)
+    assert "edge record 0" not in outside_the_blocks(request).replace(
+        '("edge record 0" is the first one that was a valid source record)', ""
+    )
+
+
+def test_every_edge_record_named_in_feedback_is_visible_in_the_rendered_repair_prompt() -> None:
+    """A15: the echo used to hide the edge records that the feedback names."""
+    long_value = "A" * 45
+    inp = s1_input()
+    valid = [{**inp.samples[0], "customer_id": f"C-90{n}"} for n in range(4)]
+    valid[2]["email"] = long_value  # the record the gate will complain about
+    texts = [json.dumps(valid[0]), '{"not": "a source record"}', json.dumps(valid[1]),
+             json.dumps(valid[2]), json.dumps(valid[3])]  # fmt: skip
+    kept = tuple(valid)  # the dropped record shifts every later number down by one
+    built_l1 = build_bundle(inp, extra_samples=kept)
+    findings = [f for f in check_ast(built_l1.files).findings if f.rule is Rule.SECRET_LITERAL]
+    assert findings, "the long value must trip the gate or this test proves nothing"
+    items = gate_items(GateResult("ast", tuple(findings)), built_l1.files, len(inp.samples))
+    feedback = build_feedback(1, items)
+    named = {int(n) for n in re.findall(r"edge record (\d+)", feedback.render())}
+    assert named == {2}, (
+        "the offending record is number 2 among the valid ones, position 3 in the list"
+    )
+
+    previous = json.dumps({"rationale": "r", "edge_record_json": texts})
+    block = repair(built_l1, "L1R", previous=previous, feedback=feedback).parts[0]
+    for number in named:
+        assert f"edge record {number}: {texts[number + 1]}" in block
+    assert f"not used (keys are not exactly the source fields): {texts[1]}" in block
+    assert "edge records left out" not in block
+
+
+def test_edge_records_are_echoed_within_the_cap_for_a_full_reply(built: Built) -> None:
+    texts = [json.dumps({"k": "v" * 300}) for _ in range(9)]
+    shown = echo_previous(
+        "L1R", json.dumps({"rationale": "r", "edge_record_json": texts}), built.inp
+    )
+    assert "[3 more edge records ignored]" in shown and len(shown) < ECHO_CAP_CHARS
 
 
 # ---- the echo cap (pre-registered: 7,500 characters) -------------------------------------------
@@ -174,16 +214,16 @@ def test_cap_negative_control_an_echo_within_the_cap_is_unchanged() -> None:
 
 
 def test_the_l2_echo_is_the_source_as_plain_text_and_capped() -> None:
-    short = echo_previous("L2R", l2_reply("a = 1\nb = 2\n"))
+    short = echo_previous("L2R", l2_reply("a = 1\nb = 2\n"), s1_input())
     assert short == "a = 1\nb = 2\n", "not JSON-escaped"
-    long = echo_previous("L2R", l2_reply("z = 1\n" * 4000))
+    long = echo_previous("L2R", l2_reply("z = 1\n" * 4000), s1_input())
     assert long.endswith("more characters]") and len(long) < ECHO_CAP_CHARS + 60
 
 
 def test_a_reply_that_is_not_json_is_echoed_raw_and_capped() -> None:
-    assert echo_previous("L2R", "not json at all") == "not json at all"
-    assert echo_previous("L1R", "[1, 2]") == "[1, 2]"
-    assert len(echo_previous("L2R", "q" * 20000)) < ECHO_CAP_CHARS + 60
+    assert echo_previous("L2R", "not json at all", s1_input()) == "not json at all"
+    assert echo_previous("L1R", "[1, 2]", s1_input()) == "[1, 2]"
+    assert len(echo_previous("L2R", "q" * 20000, s1_input())) < ECHO_CAP_CHARS + 60
 
 
 # ---- size -----------------------------------------------------------------------------------
