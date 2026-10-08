@@ -2,7 +2,7 @@
 
 Two of the three recorded L2 replies (S4 and S3) end with a stray closing brace, so their source
 does not parse: they have no type-escape count and cannot be a baseline. The first recorded reply
-(S1) is a full module with many ``Any``: under the old rule it would have been rejected after either.
+(S1) is a full module with many ``Any``: under the old rule either would have got it rejected.
 """
 
 import ast
