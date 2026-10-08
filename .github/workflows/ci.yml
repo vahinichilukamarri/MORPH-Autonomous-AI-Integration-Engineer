@@ -87,6 +87,9 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run pytest -q
+      # Regenerates codegen-eval.md and repair-eval.md from committed results and replays; an
+      # undeclared edit to a result or a report fails.
+      - run: uv run python -m scripts.render_reports --check
       - name: Show which tests failed
         if: failure()
         run: |

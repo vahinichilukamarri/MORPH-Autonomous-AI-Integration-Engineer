@@ -157,6 +157,7 @@ class AttemptSummary(BaseModel):
     guard_enforced: list[str] = Field(default_factory=list)
     guard_shadow: list[str] = Field(default_factory=list)
     output_hash: str
+    prompt_hash: str | None = None  # links the attempt to its reply in the committed replays
     finish_reason: str | None
     input_tokens: int | None
     output_tokens: int | None
@@ -238,6 +239,7 @@ def summarise_attempts(session: Session, run_id: int) -> list[AttemptSummary]:
                 guard_enforced=sorted(g["guard"] for g in guards if g["mode"] == "ENFORCED"),
                 guard_shadow=sorted(g["guard"] for g in guards if g["mode"] == "SHADOW"),
                 output_hash=row.output_hash,
+                prompt_hash=call.prompt_hash if call else None,
                 finish_reason=row.finish_reason,
                 input_tokens=call.input_tokens if call else None,
                 output_tokens=call.output_tokens if call else None,

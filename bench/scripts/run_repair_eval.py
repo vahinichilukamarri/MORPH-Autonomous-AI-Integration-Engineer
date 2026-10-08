@@ -169,6 +169,14 @@ def git_sha() -> str:
     return done.stdout.strip() or "unknown"
 
 
+def git_dirty() -> bool | None:
+    done = subprocess.run(  # noqa: S603
+        ["git", "status", "--porcelain", "--untracked-files=no"],  # noqa: S607
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    return bool(done.stdout.strip()) if done.returncode == 0 else None
+
+
 def write_provenance(path: Path, **fields: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(fields, indent=2, sort_keys=True, default=str) + "\n", "utf-8")
@@ -276,9 +284,16 @@ def main(
         if start_mode is StartMode.FIXED
         else None
     )
+    earlier_path = store_dir / "provenance.json"
+    earlier: dict[str, Any] = (
+        json.loads(earlier_path.read_text("utf-8")) if earlier_path.is_file() else {}
+    )
+    now = datetime.now(UTC).isoformat()
     write_provenance(
-        store_dir / "provenance.json", phase=args.phase, started=datetime.now(UTC).isoformat(),
-        git_sha=git_sha(), provider=provider, model_configured=_model(settings, provider),
+        store_dir / "provenance.json", phase=args.phase, started=earlier.get("started", now),
+        starts=[*earlier.get("starts", []), now],
+        git_sha=git_sha(), git_dirty=git_dirty(), provider=provider,
+        model_configured=_model(settings, provider),
         tpm_limit_assumed=args.tpm_limit, tpm_limit_source="the v0.4 response headers (8000)",
         max_real_calls=max_calls, max_real_tokens=args.max_real_tokens, test_only=test_only,
         repair_prompt_version=REPAIR_PROMPT_VERSION, graph_version=GRAPH_VERSION,
