@@ -553,3 +553,17 @@ def test_no_secret_value_reaches_the_stored_feedback(
     result = run_repair(rig.env)
     stored = json.dumps([r.feedback for r in attempts(session, result.run_id)])
     assert result.status == "READY" and secret not in stored and "[redacted]" in stored
+
+
+def test_a_full_module_after_an_unparseable_one_is_not_rejected_by_g4(
+    session: Session, test_engine: Engine, tmp_path: Path
+) -> None:
+    """Amendment A14, as seen through the graph: the stray-brace reply gives G4 no baseline."""
+    stray_brace = GOOD + "}\n"  # JSON-valid reply whose source does not parse, as in v0.4 S3 and S4
+    rig = make(session, test_engine, tmp_path, [l2_reply(stray_brace), l2_reply(GOOD)])
+    result = run_repair(rig.env)
+    rows = attempts(session, result.run_id)
+    assert result.status == "READY", [r.feedback for r in rows]
+    assert [r.failed_stage for r in rows] == ["AST", None]
+    assert rows[0].feedback is not None and rows[0].feedback["items"][0]["code"] == "SYNTAX"
+    assert rows[1].guard_result == []

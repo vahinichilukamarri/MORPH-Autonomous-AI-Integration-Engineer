@@ -174,7 +174,7 @@ def test_g4_counts_any_cast_and_object_annotations() -> None:
     assert type_escape_count("def f(a: int) -> int:\n    return a\n") == 0
     assert type_escape_count(ONE_ANY) == 1
     assert type_escape_count(THREE_ESCAPES) == 5  # Any x3, object, cast
-    assert type_escape_count("def broken(:\n") == 0
+    assert type_escape_count("def broken(:\n") is None, "no source, no count, no baseline"
 
 
 def test_g4_trips_only_when_escapes_rise_against_the_previous_attempt() -> None:
@@ -327,3 +327,33 @@ def test_g5_does_not_trip_on_a_target_assigned_id_that_no_request_carries() -> N
     assert "customer_id" not in target["update_fields"]  # type: ignore[index]
     assert "customer_id" not in included and "customer_id" not in required
     assert check_required_fields(strategy, required, included) == []
+
+
+# ---- A14: G4 has no baseline after an unparseable attempt ----------------------------------
+
+STRAY_BRACE = "def run(keys):\n    return 1\n}\n"  # a stray brace, as in recorded v0.4 replies
+
+
+def test_g4_positive_control_a_real_increase_after_a_parseable_attempt_trips() -> None:
+    parseable = ONE_ANY
+    (finding,) = check_any_loosening({SYNC: THREE_ESCAPES}, {SYNC: parseable})
+    assert finding.guard == "G4" and "rose from 1 to 5" in finding.message
+
+
+def test_g4_negative_control_first_parseable_output_after_an_unparseable_one() -> None:
+    assert type_escape_count(STRAY_BRACE) is None
+    assert check_any_loosening({SYNC: THREE_ESCAPES}, {SYNC: STRAY_BRACE}) == []
+
+
+def test_g4_the_attempt_after_that_is_compared_with_the_parseable_one_before_it() -> None:
+    first = THREE_ESCAPES  # 5 escapes: the baseline once the attempt before it was unparseable
+    assert check_any_loosening({SYNC: first}, {SYNC: STRAY_BRACE}) == []
+    worse = first.replace("def f(", "def g(a: Any, b: Any, c: Any):\n    pass\n\n\ndef f(")
+    assert type_escape_count(worse) == 8
+    (finding,) = check_any_loosening({SYNC: worse}, {SYNC: first})
+    assert "rose from 5 to 8" in finding.message
+
+
+def test_g4_does_not_run_when_the_previous_reply_gave_no_source_at_all() -> None:
+    # unparseable, truncated, empty and non-JSON replies reach the guard as previous=None
+    assert check_any_loosening({SYNC: THREE_ESCAPES}, None) == []

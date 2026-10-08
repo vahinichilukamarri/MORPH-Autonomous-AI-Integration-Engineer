@@ -154,12 +154,15 @@ def check_suppression(files: Mapping[str, str]) -> list[GuardFinding]:
 # ---- G4 ----------------------------------------------------------------------------------------
 
 
-def type_escape_count(source: str) -> int:
-    """How many ways the code opts out of precise types: ``Any``, ``cast(...)``, ``object``."""
+def type_escape_count(source: str) -> int | None:
+    """How many ways the code opts out of precise types: ``Any``, ``cast(...)``, ``object``.
+
+    None when the source does not parse: there is nothing to count, so it cannot be a baseline.
+    """
     try:
         tree = ast.parse(source)
     except SyntaxError:
-        return 0
+        return None
     count = 0
     annotations: list[ast.AST] = []
     for node in ast.walk(tree):
@@ -185,7 +188,13 @@ def type_escape_count(source: str) -> int:
 def check_any_loosening(
     sources: Mapping[str, str], previous: Mapping[str, str] | None
 ) -> list[GuardFinding]:
-    """G4: type escapes may not increase against the previous attempt (nothing to compare at 0)."""
+    """G4: type escapes may not increase against the previous attempt (amendment A14).
+
+    There is no baseline, so G4 does not run, when there is no previous attempt or when the
+    previous attempt's source does not parse. A reply that was unparseable, truncated, empty or not
+    JSON has no source at all, and the caller passes ``previous=None``. The next attempt's own count
+    then becomes the baseline for the one after it. G4 only ever rejects.
+    """
     if previous is None:
         return []
     findings = []
@@ -193,6 +202,8 @@ def check_any_loosening(
         if path not in previous:
             continue
         before, after = type_escape_count(previous[path]), type_escape_count(source)
+        if before is None or after is None:
+            continue
         if after > before:
             findings.append(GuardFinding("G4", f"type escapes rose from {before} to {after}", path))
     return findings
