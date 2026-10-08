@@ -348,3 +348,59 @@ class SandboxRunRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     version: Mapped[IntegrationVersion] = relationship(back_populates="sandbox_runs")
+
+
+class RepairRun(Base):
+    """One repair run for one unit. Content lives here; the checkpoint holds position only.
+
+    The checkpoint thread id is this row's id.
+    """
+
+    __tablename__ = "repair_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mapping_run_id: Mapped[int] = mapped_column(ForeignKey("mapping_runs.id"), index=True)
+    condition: Mapped[str] = mapped_column(String(8))
+    start_mode: Mapped[str] = mapped_column(String(8))
+    status: Mapped[str] = mapped_column(String(32))
+    terminal_reason: Mapped[str | None] = mapped_column(Text)
+    pauses: Mapped[int] = mapped_column(Integer, default=0)
+    size_policy: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    attempts: Mapped[list["RepairAttempt"]] = relationship(
+        back_populates="run", order_by="RepairAttempt.attempt"
+    )
+
+
+class RepairAttempt(Base):
+    """One model turn and what became of it. No prompt text and no secrets."""
+
+    __tablename__ = "repair_attempts"
+    __table_args__ = (UniqueConstraint("repair_run_id", "attempt"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    repair_run_id: Mapped[int] = mapped_column(ForeignKey("repair_runs.id"), index=True)
+    attempt: Mapped[int] = mapped_column(Integer)
+    prompt_hash: Mapped[str] = mapped_column(String(64))
+    source: Mapped[str] = mapped_column(String(16))
+    output_text: Mapped[str] = mapped_column(Text)
+    output_hash: Mapped[str] = mapped_column(String(64))
+    error: Mapped[str | None] = mapped_column(Text)
+    finish_reason: Mapped[str | None] = mapped_column(String(32))
+    total_tokens: Mapped[int | None] = mapped_column(Integer)
+    usage: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    size_estimate: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    failed_stage: Mapped[str | None] = mapped_column(String(16))
+    guard_result: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    feedback: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    integration_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("integration_versions.id"), index=True
+    )
+    llm_call_id: Mapped[int | None] = mapped_column(ForeignKey("llm_calls.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    run: Mapped[RepairRun] = relationship(back_populates="attempts")
