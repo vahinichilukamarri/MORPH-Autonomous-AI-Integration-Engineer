@@ -31,7 +31,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["morph_bench", "scripts", "tests", "oracle"]
+files = ["morph_bench", "scripts", "tests", "oracle", "smoke_tests"]
 
 [[tool.mypy.overrides]]
 module = ["fastembed", "fastembed.*"]
@@ -40,6 +40,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["docker: needs Docker and the sandbox image"]
 
 [tool.uv.sources]
 morph-backend = { path = "../backend", editable = true }

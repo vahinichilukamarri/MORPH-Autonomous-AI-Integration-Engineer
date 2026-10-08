@@ -178,6 +178,11 @@ jobs:
           except LimitsNotEnforced as error:
               print("::error title=sandbox limits are not enforced::" + " ".join(f"{error} | docker: {info}".split())[:1500])
           PY
+      - name: Repair smoke test on D for all three scenarios
+        working-directory: bench
+        run: |
+          uv sync
+          uv run pytest smoke_tests -q -p no:cacheprovider
       - name: Oracle against condition D
         working-directory: bench
         run: |
