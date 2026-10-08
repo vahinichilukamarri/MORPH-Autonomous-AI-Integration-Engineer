@@ -1,0 +1,309 @@
+[
+  {
+    "attempts": [
+      {
+        "attempt": 0,
+        "failed_stage": "PROPOSAL",
+        "feedback_codes": [
+          "PROPOSAL.UPSERT",
+          "PROPOSAL.omit_if_null_fields",
+          "PROPOSAL.omit_if_null_fields"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "d83f4d90adde05e577e5b3949835b5678340db8e6ec03b16b5a4e5824a3991e0"
+      },
+      {
+        "attempt": 1,
+        "failed_stage": "GUARD",
+        "feedback_codes": [
+          "GUARD.G5",
+          "GUARD.G5",
+          "GUARD.G5"
+        ],
+        "guard_enforced": [
+          "G5",
+          "G5",
+          "G5"
+        ],
+        "guard_shadow": [],
+        "output_hash": "27718ab81eb44d801d92e6b7f78f569bf2d98964a7d7f42958d8d2c9b5f8ecab"
+      },
+      {
+        "attempt": 2,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.SECRET_LITERAL",
+          "AST.SECRET_LITERAL",
+          "AST.SECRET_LITERAL"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "ecb153e0f28de8ce9296fc1d4258f80e9128ee4a81b185df87f89a22c159d43a"
+      },
+      {
+        "attempt": 3,
+        "failed_stage": null,
+        "feedback_codes": [],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "d3e5681d8f713ec1962e7cc8a73128b35e3169afdf2a20cf07299dbb8c92f408"
+      }
+    ],
+    "condition": "L1R",
+    "model_turns": 4,
+    "reason": "",
+    "scenario_id": "crm_customer_to_support_user",
+    "start_mode": "fixed",
+    "status": "READY"
+  },
+  {
+    "attempts": [
+      {
+        "attempt": 0,
+        "failed_stage": "GUARD",
+        "feedback_codes": [
+          "GUARD.G3"
+        ],
+        "guard_enforced": [
+          "G3"
+        ],
+        "guard_shadow": [],
+        "output_hash": "7185c957378120bcdef3cdb263be29cf6a66f35fb069e71fa348cfa4c246cd0a"
+      },
+      {
+        "attempt": 1,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.DUNDER_ACCESS"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "051b2b4cee9a3621626448a2f252b0562a7d7becb8e23e421ae7e5ff6b492e18"
+      },
+      {
+        "attempt": 2,
+        "failed_stage": "RUFF",
+        "feedback_codes": [
+          "RUFF.F401",
+          "RUFF.UP035",
+          "RUFF.UP035",
+          "RUFF.UP006",
+          "RUFF.UP006",
+          "MYPY.TYPE_ERROR",
+          "MYPY.TYPE_ERROR",
+          "MYPY.TYPE_ERROR"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "9ed7dc692ebf6ac0f90c921845f926aada25b21ee784c04e979334419de705be"
+      },
+      {
+        "attempt": 3,
+        "failed_stage": "GUARD",
+        "feedback_codes": [
+          "GUARD.G4"
+        ],
+        "guard_enforced": [
+          "G4"
+        ],
+        "guard_shadow": [],
+        "output_hash": "5cff39bcae93f835e81fdd85b2d538d29696089cdb250489efc8472d07e112b9"
+      }
+    ],
+    "condition": "L2R",
+    "model_turns": 4,
+    "reason": "EXHAUSTED:GUARD",
+    "scenario_id": "crm_customer_to_support_user",
+    "start_mode": "fixed",
+    "status": "HUMAN_REVIEW_REQUIRED"
+  },
+  {
+    "attempts": [
+      {
+        "attempt": 0,
+        "failed_stage": "PROPOSAL",
+        "feedback_codes": [
+          "PROPOSAL.UPSERT",
+          "PROPOSAL.omit_if_null_fields",
+          "PROPOSAL.omit_if_null_fields"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "2165fb8bf4d58246c6d512333afe5ed6a9b41b591f704b77486ee61ee86bd149"
+      },
+      {
+        "attempt": 1,
+        "failed_stage": null,
+        "feedback_codes": [],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "28c6322f58c659f52c378c209749862d7b5f1f7fb533fa2aaab449382fd6a054"
+      }
+    ],
+    "condition": "L1R",
+    "model_turns": 2,
+    "reason": "",
+    "scenario_id": "crm_v2_to_support_v2",
+    "start_mode": "fixed",
+    "status": "READY"
+  },
+  {
+    "attempts": [
+      {
+        "attempt": 0,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.SYNTAX"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "48386d719a8c2b163e5d34a8a09f17b17df0b9a92ff4b5f734e363d4860c1acc"
+      },
+      {
+        "attempt": 1,
+        "failed_stage": "GUARD",
+        "feedback_codes": [
+          "GUARD.G3"
+        ],
+        "guard_enforced": [
+          "G3"
+        ],
+        "guard_shadow": [],
+        "output_hash": "af3be4b735fd83e5a451a9ae90a43ef089eb3bcc9d870dfbacd172112938e8ed"
+      },
+      {
+        "attempt": 2,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.DUNDER_ACCESS"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "6fdcb6d1ba6666085b130b9d9c66b3b75e3f87efdbf945e3905f328439006fb3"
+      },
+      {
+        "attempt": 3,
+        "failed_stage": "RUFF",
+        "feedback_codes": [
+          "RUFF.F401",
+          "RUFF.F401",
+          "RUFF.UP035",
+          "RUFF.UP035",
+          "RUFF.F401",
+          "RUFF.UP006",
+          "RUFF.UP006",
+          "MYPY.TYPE_ERROR"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "d9025fd4488b9d7c28e91c52cba9b85d9076831d3f3a9ee4fe2a6ea80253c5c4"
+      }
+    ],
+    "condition": "L2R",
+    "model_turns": 4,
+    "reason": "EXHAUSTED:RUFF",
+    "scenario_id": "crm_v2_to_support_v2",
+    "start_mode": "fixed",
+    "status": "HUMAN_REVIEW_REQUIRED"
+  },
+  {
+    "attempts": [
+      {
+        "attempt": 0,
+        "failed_stage": "PROPOSAL",
+        "feedback_codes": [
+          "PROPOSAL.omit_if_null_fields",
+          "PROPOSAL.omit_if_null_fields"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "27a97ed504467c6765e5b6f5d714b3f87e9933ceadd38b9b236d130ab0d5c428"
+      },
+      {
+        "attempt": 1,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.SECRET_LITERAL",
+          "AST.SECRET_LITERAL"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "3042660c1e3587cc3963e1a3bcd17f7e282bdd9cbc0c8997c914427a8c6da866"
+      },
+      {
+        "attempt": 2,
+        "failed_stage": null,
+        "feedback_codes": [],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "c5dad38f58677f1d0eef766895c54ee8bf684a90b865a969de40032ba9931e63"
+      }
+    ],
+    "condition": "L1R",
+    "model_turns": 3,
+    "reason": "",
+    "scenario_id": "support_user_to_crm_customer",
+    "start_mode": "fixed",
+    "status": "READY"
+  },
+  {
+    "attempts": [
+      {
+        "attempt": 0,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.SYNTAX"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "c3171ee9f2cd7c9733c2eeb5a95d13e4cb319d0bd42e4bffbeadb2bc924dc249"
+      },
+      {
+        "attempt": 1,
+        "failed_stage": "GUARD",
+        "feedback_codes": [
+          "GUARD.G3"
+        ],
+        "guard_enforced": [
+          "G3"
+        ],
+        "guard_shadow": [],
+        "output_hash": "3301607323cabe9904f1b188438f7c8d43f3eb9005bbbb165127924ff29d3379"
+      },
+      {
+        "attempt": 2,
+        "failed_stage": "AST",
+        "feedback_codes": [
+          "AST.DUNDER_ACCESS"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "2a7080ca81d61b9086a358fd38a977df81cd38db3b170f63045936b5219b9eb1"
+      },
+      {
+        "attempt": 3,
+        "failed_stage": "RUFF",
+        "feedback_codes": [
+          "RUFF.F401",
+          "RUFF.UP035",
+          "RUFF.UP035",
+          "RUFF.F401",
+          "RUFF.F401",
+          "RUFF.F401",
+          "RUFF.F401",
+          "RUFF.UP006"
+        ],
+        "guard_enforced": [],
+        "guard_shadow": [],
+        "output_hash": "74b732e8e5ce1d8c76e1262269e1baa4a77f03ba1290291b560946ceacf4682c"
+      }
+    ],
+    "condition": "L2R",
+    "model_turns": 4,
+    "reason": "EXHAUSTED:RUFF",
+    "scenario_id": "support_user_to_crm_customer",
+    "start_mode": "fixed",
+    "status": "HUMAN_REVIEW_REQUIRED"
+  }
+]

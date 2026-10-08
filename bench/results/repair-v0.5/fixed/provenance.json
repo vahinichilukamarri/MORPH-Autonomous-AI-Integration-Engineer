@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "milestone": "v0.5-repair",
+  "phase": "fixed",
+  "harness_sha": "d80d9f0a333728aaea71f43e05d110f722ac8d45",
+  "harness_tree_dirty_at_run": false,
+  "versions": {
+    "generator": "1",
+    "runtime": "1",
+    "compiler": "1",
+    "gate": "1",
+    "codegen_prompt": "codegen-v1",
+    "repair_prompt": "repair-v1",
+    "repair_graph": "repair-graph-1"
+  },
+  "run_date": "2026-10-08",
+  "run_started": "2026-10-08T15:23:29.233361+00:00",
+  "run_finished": "2026-10-08T15:53:38.584588+00:00",
+  "provider": "groq",
+  "model_configured": "openai/gpt-oss-120b",
+  "model_reported_by_replies": "openai/gpt-oss-120b",
+  "settings": "low reasoning effort, temperature 0, at most 4000 output tokens",
+  "groq_limits": {
+    "tier": "Groq free tier, as seen by the key used; the tier is recorded, never changed",
+    "tpm_limit_assumed": 8000,
+    "tpm_limit_source": "the v0.4 response headers (8000)",
+    "headers_observed": {
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-limit-tokens": "8000",
+      "x-ratelimit-remaining-requests": "996",
+      "x-ratelimit-remaining-tokens": "1044",
+      "x-ratelimit-reset-requests": "5m45.6s",
+      "x-ratelimit-reset-tokens": "52.17s"
+    }
+  },
+  "caps": {
+    "max_real_calls": 20,
+    "max_real_tokens": 160000,
+    "budget_used": {
+      "calls": 15,
+      "tokens": 102873
+    }
+  },
+  "exit_status": 0,
+  "units": 6,
+  "files": {
+    "results.jsonl": {
+      "sha256": "d0f139e590f2430db35f04405826ebd06b2168e85c0e5fc4d79ea983fcf6e122",
+      "sha256_as_exported": "d0f139e590f2430db35f04405826ebd06b2168e85c0e5fc4d79ea983fcf6e122",
+      "origin": "byte copy of the run's saved results"
+    },
+    "hash_note": "sha256 of the file with LF line endings, as stored in git"
+  },
+  "post_run_edits": []
+}
