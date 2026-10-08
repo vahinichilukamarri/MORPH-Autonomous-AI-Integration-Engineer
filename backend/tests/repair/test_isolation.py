@@ -214,3 +214,47 @@ def test_a_missing_replay_raises_and_no_fallback_exists(tmp_path: Path) -> None:
     with pytest.raises(ReplayMissError) as raised:
         replay.complete_structured(request, Reply, reask=False)
     assert isinstance(raised.value, LLMError)
+
+
+# ---- M2: the graph modules --------------------------------------------------------------------
+
+
+def test_the_closure_now_includes_the_graph_modules() -> None:
+    modules, _ = closure()
+    assert {"app.repair.nodes", "app.repair.graph", "app.repair.service"} <= modules
+
+
+def test_langgraph_is_imported_only_by_the_graph_and_the_service() -> None:
+    users = {
+        p.stem
+        for p in repair_files()
+        if {n.split(".")[0] for n in imported_names(parse(p))} & {"langgraph"}
+    }
+    assert users == {"graph", "service"}
+
+
+def test_only_the_service_reads_the_environment_and_only_for_tracing() -> None:
+    readers = {
+        p.stem
+        for p in repair_files()
+        if any(
+            isinstance(n, ast.Attribute) and n.attr in {"environ", "getenv"}
+            for n in ast.walk(parse(p))
+        )
+    }
+    assert readers == {"service"}
+    constants = {
+        n.value
+        for n in ast.walk(parse(REPAIR / "service.py"))
+        if isinstance(n, ast.Constant) and isinstance(n.value, str) and n.value.isupper()
+    }
+    assert {c for c in constants if "TRACING" not in c and len(c) > 3} == set()
+
+
+def test_the_nodes_read_no_file_of_their_own() -> None:
+    for name in ("nodes", "graph", "state", "service", "builder", "sizing"):
+        for node in ast.walk(parse(REPAIR / f"{name}.py")):
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in {"read_text", "read_bytes", "glob", "rglob", "iterdir"}
+            if isinstance(node, ast.Name):
+                assert node.id != "open", name

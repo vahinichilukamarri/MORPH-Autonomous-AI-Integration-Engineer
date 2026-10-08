@@ -72,6 +72,26 @@ class Feedback:
     omitted: int
     history: str = ""
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "attempt": self.attempt,
+            "items": [
+                {"stage": i.stage.value, "code": i.code, "message": i.message,
+                 "file": i.file, "line": i.line}
+                for i in self.items
+            ],
+            "omitted": self.omitted,
+            "history": self.history,
+        }  # fmt: skip
+
+    @staticmethod
+    def from_dict(data: Mapping[str, Any]) -> "Feedback":
+        items = tuple(
+            FeedbackItem(Stage(i["stage"]), i["code"], i["message"], i.get("file"), i.get("line"))
+            for i in data["items"]
+        )
+        return Feedback(data["attempt"], items, data["omitted"], data.get("history", ""))
+
     def codes(self) -> tuple[str, ...]:
         return tuple(f"{item.stage}.{item.code}" for item in self.items)
 

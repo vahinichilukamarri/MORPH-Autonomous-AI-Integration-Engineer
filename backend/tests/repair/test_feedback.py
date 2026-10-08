@@ -181,3 +181,15 @@ def test_the_history_line_lists_earlier_codes_and_is_bounded() -> None:
     assert "previous: attempt 0: PROPOSAL.UPSERT; attempt 1: AST.SYNTAX" in short.render()
     long = build_feedback(9, [item()], history=[(n, ["X" * 60]) for n in range(10)])
     assert len(long.history) <= fb.MAX_HISTORY_CHARS
+
+
+def test_feedback_survives_a_round_trip_through_json() -> None:
+    import json
+
+    original = build_feedback(
+        2,
+        [item(Stage.AST, "A", "m1", "integration/sync.py", 3), item(Stage.SMOKE, "TIMEOUT", "m2")],
+        history=[(0, ["PROPOSAL.INVALID_JSON"])],
+    )
+    restored = fb.Feedback.from_dict(json.loads(json.dumps(original.to_dict())))
+    assert restored == original and restored.render() == original.render()
