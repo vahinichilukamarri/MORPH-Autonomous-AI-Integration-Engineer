@@ -267,12 +267,19 @@ def test_a_unit_that_trips_g6_and_g7_is_still_not_rejected() -> None:
 # ---- no-op detection -----------------------------------------------------------------------------
 
 
-def test_formatting_and_comments_do_not_change_the_l2_hash_but_code_does() -> None:
+def test_only_blank_lines_and_trailing_whitespace_leave_the_l2_hash_unchanged() -> None:
     plain = "def run(keys):\n    return 1\n"
-    spaced = "# a note\ndef run( keys ):\n\n    return   1  # trailing\n"
+    padded = "def run(keys):   \n\n    return 1\n\n\n"
     other = "def run(keys):\n    return 2\n"
-    assert output_hash_l2(plain) == output_hash_l2(spaced) != output_hash_l2(other)
-    assert output_hash_l2("def broken(:") == output_hash_l2("def  broken(:\n")
+    assert output_hash_l2(plain) == output_hash_l2(padded) != output_hash_l2(other)
+    assert output_hash_l2("def broken(:") == output_hash_l2("def broken(:\n\n")
+
+
+def test_deleting_a_suppression_comment_is_a_new_output_not_a_repeat() -> None:
+    suppressed = "def run(keys):\n    return 1  # noqa: E501\n"
+    repaired = "def run(keys):\n    return 1\n"
+    assert output_hash_l2(suppressed) != output_hash_l2(repaired)
+    assert not is_noop(output_hash_l2(repaired), [output_hash_l2(suppressed)])
 
 
 def test_the_l1_hash_ignores_key_order_and_edge_record_formatting() -> None:
@@ -288,3 +295,35 @@ def test_a_repeat_of_any_earlier_attempt_is_a_no_op_not_only_the_last() -> None:
     assert is_noop(h0, [h0, h1, h2]), "attempt 3 repeating attempt 0 stops"
     assert not is_noop(h2, [h0, h1])
     assert not is_noop(h0, [])
+
+
+# ---- A13: what G5 must and must not reject -------------------------------------------------------
+
+
+def g5_inputs(built: Built) -> tuple[dict[str, object], set[str], set[str]]:
+    names = {m.target_field for m in built.decision.included}
+    required = {f.name for f in built.plan.target.create_fields if f.required} & names
+    return built.strategy, required, names & built.plan.target.writable
+
+
+def test_g5_trips_on_a_strategy_that_drops_a_required_field_the_request_can_carry() -> None:
+    strategy, required, included = g5_inputs(s1_built())
+    target = dict(strategy["target"])  # type: ignore[call-overload]
+    victim = sorted(required)[0]
+    for key in ("create_fields", "update_fields"):
+        target[key] = tuple(f for f in target[key] if f != victim)
+    findings = check_required_fields({"target": target}, required, included)
+    assert any(victim in f.message and f.guard == "G5" for f in findings), findings
+
+
+def test_g5_does_not_trip_on_a_target_assigned_id_that_no_request_carries() -> None:
+    built = build(s3_approved())
+    strategy, required, included = g5_inputs(built)
+    names = {m.target_field for m in built.decision.included}
+    target = strategy["target"]
+    assert "customer_id" in names, "the id is mapped (it identifies the record)"
+    assert target["id_assigned_by_target"] is True  # type: ignore[index]
+    assert "customer_id" not in target["create_fields"]  # type: ignore[index]
+    assert "customer_id" not in target["update_fields"]  # type: ignore[index]
+    assert "customer_id" not in included and "customer_id" not in required
+    assert check_required_fields(strategy, required, included) == []

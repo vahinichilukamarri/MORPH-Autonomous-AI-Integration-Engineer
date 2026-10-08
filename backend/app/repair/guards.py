@@ -312,11 +312,12 @@ def check_swallowed_failures(source: str, path: str) -> list[GuardFinding]:
 
 
 def output_hash_l2(source: str) -> str:
-    """Identical for formatting and comment changes; any code change changes it."""
-    try:
-        normalised = ast.dump(ast.parse(source))
-    except SyntaxError:
-        normalised = "raw:" + " ".join(source.split())
+    """Identical when only blank lines or trailing whitespace differ.
+
+    Comments count: deleting a suppression comment is a real repair, not a repeat.
+    """
+    lines = (line.rstrip() for line in source.splitlines())
+    normalised = "\n".join(line for line in lines if line)
     return hashlib.sha256(normalised.encode("utf-8")).hexdigest()
 
 
