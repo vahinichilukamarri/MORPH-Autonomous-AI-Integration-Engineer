@@ -5,7 +5,7 @@ the run and nothing else is called. This module builds no provider of its own.
 """
 
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -82,6 +82,7 @@ class RepairEnv:
     tpm_limit: int = DEFAULT_TPM_LIMIT
     secrets: Sequence[str] = ()
     after_call: Any = None  # a test hook, called with the attempt number after a reply is stored
+    on_created: Callable[[int], None] | None = None  # told the run id as soon as the row exists
 
 
 @dataclass(frozen=True)
@@ -173,6 +174,8 @@ def run_repair(env: RepairEnv) -> RepairResult:
     )
     env.session.add(run)
     env.session.commit()
+    if env.on_created is not None:
+        env.on_created(run.id)
     return _drive(env, run)
 
 

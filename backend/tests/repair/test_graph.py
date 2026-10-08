@@ -567,3 +567,13 @@ def test_a_full_module_after_an_unparseable_one_is_not_rejected_by_g4(
     assert [r.failed_stage for r in rows] == ["AST", None]
     assert rows[0].feedback is not None and rows[0].feedback["items"][0]["code"] == "SYNTAX"
     assert rows[1].guard_result == []
+
+
+def test_the_run_id_is_reported_as_soon_as_the_row_exists(
+    session: Session, test_engine: Engine, tmp_path: Path
+) -> None:
+    told: list[int] = []
+    rig = make(session, test_engine, tmp_path, [l2_reply(GOOD)])
+    rig.env.on_created = told.append
+    result = run_repair(rig.env)
+    assert told == [result.run_id]
