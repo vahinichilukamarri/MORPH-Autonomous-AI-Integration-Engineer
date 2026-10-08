@@ -258,3 +258,22 @@ def test_the_nodes_read_no_file_of_their_own() -> None:
                 assert node.attr not in {"read_text", "read_bytes", "glob", "rglob", "iterdir"}
             if isinstance(node, ast.Name):
                 assert node.id != "open", name
+
+
+def test_only_the_prompt_builder_reads_a_file_and_only_from_its_own_prompt_directory() -> None:
+    readers: dict[str, list[ast.Attribute]] = {}
+    for path in repair_files():
+        for node in ast.walk(parse(path)):
+            if isinstance(node, ast.Attribute) and node.attr in {"read_text", "read_bytes"}:
+                readers.setdefault(path.stem, []).append(node)
+    assert set(readers) == {"prompts"}
+    for node in readers["prompts"]:
+        source = node.value
+        assert isinstance(source, ast.BinOp) and isinstance(source.left, ast.Name)
+        assert source.left.id == "PROMPT_DIR"
+
+
+def test_a_file_read_outside_the_prompt_directory_would_be_caught() -> None:
+    bad = ast.parse("(BASE / 'x').read_text()")
+    node = next(n for n in ast.walk(bad) if isinstance(n, ast.Attribute) and n.attr == "read_text")
+    assert isinstance(node.value, ast.BinOp) and node.value.left.id != "PROMPT_DIR"  # type: ignore[attr-defined]
