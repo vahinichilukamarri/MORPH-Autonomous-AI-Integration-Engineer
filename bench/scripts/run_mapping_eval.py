@@ -73,6 +73,7 @@ from morph_bench.mapping_eval import (
 )
 from morph_bench.models import Bundle, MappingEntry
 from morph_bench.models import MappingType as ExpectedType
+from morph_bench.repair_eval import require_usage
 from morph_bench.systems import REPO_ROOT, load_spec
 
 TEST_ONLY_OUTPUT = Path(".run/mapping-eval.test-only.md")
@@ -106,7 +107,9 @@ class ResumableProvider(BaseLLMProvider):
         *,
         limits: Limits,
         sleep: Callable[[float], None] = time.sleep,
+        require_usage: bool = False,
     ) -> None:
+        self._require_usage = require_usage
         self._inner = inner
         self._store = ResponseStore(store_dir / "calls")
         self._file = store_dir / "calls" / "calls.jsonl"
@@ -129,21 +132,17 @@ class ResumableProvider(BaseLLMProvider):
         raw = self._inner.complete_raw(request, response_model)
         self.network_calls += 1
         meta = raw.metadata
-        record = Recorded(
-            key, raw.text, meta.provider, meta.model, meta.input_tokens, meta.output_tokens,
-            meta.reasoning_tokens, meta.latency_ms,
-        )  # fmt: skip
+        record = _recorded(key, raw)
         self._store.put(record, file=self._file)
         if self.record_file is not None and self.run_index == 1:
-            plain = Recorded(
-                request.fingerprint(response_model), raw.text, meta.provider, meta.model,
-                meta.input_tokens, meta.output_tokens, meta.reasoning_tokens, meta.latency_ms,
-            )  # fmt: skip
+            plain = _recorded(request.fingerprint(response_model), raw)
             ResponseStore(self.record_file).put(plain, file=self.record_file)
         if meta.rate_limits:
             self._limits.last_headers = dict(meta.rate_limits)
             self._limits.save(self._limits_path)
             self._pace(meta.rate_limits, (meta.input_tokens or 0) + (meta.output_tokens or 0))
+        if self._require_usage:
+            require_usage(meta)  # after the reply is stored: a paid reply is never thrown away
         return raw
 
     def _pace(self, headers: dict[str, str], last_call_tokens: int) -> None:
@@ -159,6 +158,16 @@ class ResumableProvider(BaseLLMProvider):
             return
 
 
+def _recorded(key: str, raw: RawCompletion) -> Recorded:
+    """Everything the provider reported about a call survives, including usage and finish reason."""
+    meta = raw.metadata
+    return Recorded(
+        key, raw.text, meta.provider, meta.model, meta.input_tokens, meta.output_tokens,
+        meta.reasoning_tokens, meta.latency_ms, total_tokens=meta.total_tokens, usage=meta.usage,
+        finish_reason=meta.finish_reason,
+    )  # fmt: skip
+
+
 def _to_completion(record: Recorded, prompt_hash: str) -> RawCompletion:
     from app.llm.base import CallMetadata
 
@@ -172,6 +181,9 @@ def _to_completion(record: Recorded, prompt_hash: str) -> RawCompletion:
             input_tokens=record.input_tokens,
             output_tokens=record.output_tokens,
             reasoning_tokens=record.reasoning_tokens,
+            total_tokens=record.total_tokens,
+            usage=record.usage,
+            finish_reason=record.finish_reason,
             source="cache",
         ),
     )
