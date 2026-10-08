@@ -565,3 +565,18 @@ def test_ollama_done_reason_is_the_finish_reason() -> None:
     assert (
         provider.complete_structured(REQUEST, Answer).attempts[0].metadata.finish_reason == "length"
     )
+
+
+# ---- request too large -------------------------------------------------------------------------
+
+
+def test_http_413_is_a_request_too_large_error_and_is_never_retried() -> None:
+    from app.llm.base import RequestTooLarge
+
+    rec = Recorder(
+        lambda n, r: httpx.Response(413, json={"error": {"message": "Request too large"}}), ("m",)
+    )
+    with pytest.raises(RequestTooLarge, match="too large"):
+        rec.provider("m").complete_structured(REQUEST, Answer)
+    assert len(rec.chat_calls) == 1 and rec.sleeps == []
+    assert issubclass(RequestTooLarge, LLMError)

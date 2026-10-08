@@ -22,6 +22,7 @@ from app.llm.base import (
     ModelUnavailableError,
     RateLimitExhausted,
     RawCompletion,
+    RequestTooLarge,
     strictify_schema,
     user_message,
 )
@@ -162,6 +163,8 @@ class GroqProvider(BaseLLMProvider):
         latency_ms = int((self._clock() - started) * 1000)
         if response.status_code != 200:
             snippet = self._redact(response.text[:ERROR_BODY_LIMIT])
+            if response.status_code == 413:
+                raise RequestTooLarge(f"Groq refused the request as too large: {snippet}")
             raise LLMError(f"Groq returned HTTP {response.status_code}: {snippet}")
         payload = response.json()
         usage = payload.get("usage") or {}

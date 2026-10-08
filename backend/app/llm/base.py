@@ -40,6 +40,10 @@ class RateLimitExhausted(LLMError):
         self.retry_after_s = retry_after_s
 
 
+class RequestTooLarge(LLMError):
+    """The provider refused the request as too large (HTTP 413). Deterministic: never retried."""
+
+
 class ModelUnavailableError(LLMError):
     pass
 
