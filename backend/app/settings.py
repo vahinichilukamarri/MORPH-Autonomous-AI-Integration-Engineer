@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
@@ -29,8 +29,14 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     samples_dir: Path = ENV_FILE.parent / "mock_systems" / "samples"
+    # The policy layer (v0.6). The approver token is a secret: environment only, never logged.
+    approver_token: SecretStr | None = Field(default=None, validation_alias="MORPH_APPROVER_TOKEN")
+    mcp_role: Literal["reader", "operator"] = Field(
+        default="reader", validation_alias="MORPH_MCP_ROLE"
+    )
+    policy_dir: Path = Path(__file__).resolve().parents[1] / "policy"
 
-    @field_validator("groq_api_key", mode="before")
+    @field_validator("groq_api_key", "approver_token", mode="before")
     @classmethod
     def _empty_key_is_no_key(cls, value: object) -> object:
         """An empty GROQ_API_KEY (the .env.example placeholder) means no key."""

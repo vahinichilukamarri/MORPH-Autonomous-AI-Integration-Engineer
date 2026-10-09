@@ -9,6 +9,7 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -404,3 +405,67 @@ class RepairAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     run: Mapped[RepairRun] = relationship(back_populates="attempts")
+
+
+class PolicyVersionRow(Base):
+    """A policy version the server has loaded: its hash and the parsed content it ran with."""
+
+    __tablename__ = "policy_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    version: Mapped[str] = mapped_column(String(16))
+    policy_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    loaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuditEvent(Base):
+    """One entry of the append-only, hash-chained audit log. Never updated, never deleted."""
+
+    __tablename__ = "audit_events"
+    __table_args__ = (Index("ix_audit_events_chain_seq", "chain", "seq"),)
+
+    seq: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    chain: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    session_id: Mapped[str] = mapped_column(String(64), index=True)
+    event_type: Mapped[str] = mapped_column(String(32), index=True)
+    tool: Mapped[str | None] = mapped_column(String(64))
+    principal: Mapped[str] = mapped_column(String(64))
+    call_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    policy_hash: Mapped[str | None] = mapped_column(String(64))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    prev_hash: Mapped[str] = mapped_column(String(64))
+    row_hash: Mapped[str] = mapped_column(String(64), unique=True)
+
+
+class ApprovalRequest(Base):
+    """A human decision about one exact tool call. Single use, bound to the call and the policy."""
+
+    __tablename__ = "approval_requests"
+
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(64))
+    tool: Mapped[str] = mapped_column(String(64))
+    request_hash: Mapped[str] = mapped_column(String(64), index=True)
+    policy_hash: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    decided_by: Mapped[str | None] = mapped_column(String(64))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SystemPolicyAttribute(Base):
+    """Policy attributes of a system. Written only through the approver-token REST path."""
+
+    __tablename__ = "system_policy_attributes"
+
+    system_id: Mapped[int] = mapped_column(ForeignKey("systems.id"), primary_key=True)
+    environment: Mapped[str] = mapped_column(String(16))
+    data_class: Mapped[str] = mapped_column(String(16))
+    updated_by: Mapped[str] = mapped_column(String(64))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

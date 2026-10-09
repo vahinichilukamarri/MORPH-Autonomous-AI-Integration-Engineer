@@ -6,6 +6,7 @@ from sqlalchemy import text
 from app.api.discovery import router as discovery_router
 from app.api.integrations import router as integrations_router
 from app.api.mapping import router as mapping_router
+from app.api.policy import router as policy_router
 from app.db import get_engine
 from app.settings import get_settings
 
@@ -20,7 +21,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().cors_origins,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT"],
         allow_headers=["*"],
     )
 
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(discovery_router)
     app.include_router(mapping_router)
     app.include_router(integrations_router)
+    app.include_router(policy_router)
     return app
 
 
