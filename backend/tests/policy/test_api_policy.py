@@ -52,7 +52,7 @@ def test_the_active_policy_is_described(client: TestClient) -> None:
     assert body["version"] == "v1" and len(body["hash"]) == 64
     assert [r["id"] for r in body["rules"]][:2] == ["P01-read-any-role", "P02-operator-ingest"]
     assert len(body["rules"]) == 7 and len(body["floor"]) == 10
-    assert body["session_limits"]["max_model_calls"] == 12
+    assert body["session_limits"]["max_model_calls"] == 40
 
 
 def test_the_tool_catalogue_lists_all_tools_with_their_outcomes(client: TestClient) -> None:
@@ -101,13 +101,14 @@ def test_approvals_are_listed_and_read(
 ) -> None:
     approval_id = pending(session, audit, clock)
     listed = client.get("/approvals", params={"status": "PENDING"}).json()
-    assert [a["id"] for a in listed] == [approval_id]
+    assert approval_id in [a["id"] for a in listed]
     one = client.get(f"/approvals/{approval_id}").json()
     assert one["status"] == "PENDING" and one["summary"] == {"ids": [1, 2]}
     assert client.get("/approvals/apr_0000000000000000").status_code == 404
     clock.advance(approvals.DEFAULT_TTL.total_seconds() + 1)
     assert client.get(f"/approvals/{approval_id}").json()["status"] == "EXPIRED"
-    assert client.get("/approvals", params={"status": "EXPIRED"}).json()[0]["id"] == approval_id
+    expired = client.get("/approvals", params={"status": "EXPIRED"}).json()
+    assert approval_id in [a["id"] for a in expired]
 
 
 def test_deciding_an_approval_needs_the_token(

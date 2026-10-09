@@ -90,3 +90,10 @@ def test_the_long_run_rule_needs_mixed_characters_and_high_entropy() -> None:
 def test_non_string_values_pass_through() -> None:
     clean, hits = Redactor(SENTINELS).value({"a": 1, "b": None, "c": [True, 2.5]})
     assert clean == {"a": 1, "b": None, "c": [True, 2.5]} and hits == 0
+
+
+def test_a_nul_byte_is_made_visible_so_it_can_be_stored_and_shown() -> None:
+    done = Redactor([]).text("a" + chr(0) + "b")
+    assert done.text == "a" + chr(92) + "x00b" and not done.changed
+    clean, _ = Redactor([]).value({"k" + chr(0): ["v" + chr(0)]})
+    assert chr(0) not in str(clean)

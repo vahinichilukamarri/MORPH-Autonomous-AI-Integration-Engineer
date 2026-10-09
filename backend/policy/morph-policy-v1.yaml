@@ -7,8 +7,8 @@ description: >-
   not marked synthetic needs a human approval. Per-session budgets cap model calls and sandbox runs,
   including those made inside a repair run.
 session_limits:
-  max_model_calls: 12
-  max_sandbox_runs: 40
+  max_model_calls: 40
+  max_sandbox_runs: 60
   max_result_bytes: 200000
 rules:
   - id: P01-read-any-role

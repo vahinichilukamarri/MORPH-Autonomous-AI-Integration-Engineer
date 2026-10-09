@@ -59,7 +59,7 @@ def test_the_hash_ignores_comments_and_key_order() -> None:
 
 
 def test_a_changed_rule_changes_the_hash() -> None:
-    changed = V1.replace("max_model_calls: 12", "max_model_calls: 11")
+    changed = V1.replace("max_model_calls: 40", "max_model_calls: 39")
     assert policy_hash(parse_policy(changed)) != policy_hash(parse_policy(V1))
 
 
@@ -72,7 +72,7 @@ BAD_FILES = {
     "a-bad-decision": (V1.replace("decision: deny", "decision: maybe"), "valid policy"),
     "a-bad-rule-id": (V1.replace("P01-read-any-role", "read any"), "valid policy"),
     "a-limit-above-the-ceiling": (
-        V1.replace("max_sandbox_runs: 40", "max_sandbox_runs: 9999"),
+        V1.replace("max_sandbox_runs: 60", "max_sandbox_runs: 9999"),
         "F10-limit-ceilings",
     ),
     "code-on-production": (with_rule(V1, RULE_ALLOW_PROD), "F01-exec-target-mock"),
@@ -96,7 +96,7 @@ def test_duplicate_rule_ids_are_refused() -> None:
 def test_a_lock_mismatch_refuses_to_start(tmp_path: Path) -> None:
     directory = copy_dir(tmp_path)
     path = directory / "morph-policy-v1.yaml"
-    path.write_text(V1.replace("max_model_calls: 12", "max_model_calls: 13"), encoding="utf-8")
+    path.write_text(V1.replace("max_model_calls: 40", "max_model_calls: 41"), encoding="utf-8")
     with pytest.raises(PolicyError, match="does not match policy.lock"):
         load_active(directory)
 
@@ -114,7 +114,7 @@ def test_a_missing_or_broken_lock_refuses_to_start(tmp_path: Path) -> None:
 def test_a_released_version_cannot_be_changed(tmp_path: Path) -> None:
     directory = copy_dir(tmp_path)
     path = directory / "morph-policy-v1.yaml"
-    path.write_text(V1.replace("max_model_calls: 12", "max_model_calls: 13"), encoding="utf-8")
+    path.write_text(V1.replace("max_model_calls: 40", "max_model_calls: 41"), encoding="utf-8")
     problems = check_policy_dir(directory)
     assert any("changed after release" in p for p in problems)
 
@@ -139,17 +139,17 @@ def release_v2(directory: Path, text: str) -> list[str]:
 def test_a_loosening_version_must_declare_it(tmp_path: Path) -> None:
     directory = copy_dir(tmp_path)
     looser = V1.replace("version: v1", "version: v2").replace(
-        "max_model_calls: 12", "max_model_calls: 20"
+        "max_model_calls: 40", "max_model_calls: 45"
     )
     assert any("loosens v1 without declaring" in p for p in release_v2(directory, looser))
 
 
 def test_a_declared_loosening_and_a_tightening_pass(tmp_path: Path) -> None:
     declared = V1.replace("version: v1", "version: v2\nloosens: [more model calls for the demo]")
-    declared = declared.replace("max_model_calls: 12", "max_model_calls: 20")
+    declared = declared.replace("max_model_calls: 40", "max_model_calls: 45")
     assert release_v2(copy_dir(tmp_path / "a"), declared) == []
     tighter = V1.replace("version: v1", "version: v2").replace(
-        "max_model_calls: 12", "max_model_calls: 6"
+        "max_model_calls: 40", "max_model_calls: 30"
     )
     assert release_v2(copy_dir(tmp_path / "b"), tighter) == []
 
@@ -159,7 +159,7 @@ def test_a_declared_loosening_and_a_tightening_pass(tmp_path: Path) -> None:
     [
         (lambda t: t.replace("version: v1", "version: v2"), "neutral"),
         (lambda t: t.replace("max_result_bytes: 200000", "max_result_bytes: 100000"), "tightening"),
-        (lambda t: t.replace("max_sandbox_runs: 40", "max_sandbox_runs: 41"), "loosening"),
+        (lambda t: t.replace("max_sandbox_runs: 60", "max_sandbox_runs: 61"), "loosening"),
         (
             lambda t: t.replace("decision: needs_approval", "decision: allow"),
             "loosening",

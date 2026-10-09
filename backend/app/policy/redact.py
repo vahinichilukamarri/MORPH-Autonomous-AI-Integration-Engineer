@@ -74,6 +74,8 @@ class Redactor:
         self._values = sorted(values, key=len, reverse=True)
 
     def text(self, text: str) -> Redaction:
+        # A NUL byte cannot be stored in a JSON column and has no place in a record or result.
+        text = text.replace(chr(0), chr(92) + "x00")
         known = 0
         for value in self._values:
             if value in text:

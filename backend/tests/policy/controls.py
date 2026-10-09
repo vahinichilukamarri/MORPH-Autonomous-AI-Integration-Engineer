@@ -78,7 +78,7 @@ def _withhold_control() -> tuple[bool, bool]:
 
 def _ceiling_control() -> tuple[bool, bool]:
     text = active().path.read_text(encoding="utf-8")
-    too_big = parse_policy_unchecked(text.replace("max_model_calls: 12", "max_model_calls: 5000"))
+    too_big = parse_policy_unchecked(text.replace("max_model_calls: 40", "max_model_calls: 5000"))
     return bool(policy_floor_problems(too_big)), policy_floor_problems(active().file) == []
 
 
@@ -136,11 +136,11 @@ CONTROLS: dict[str, Control] = {
     BUDGET_RULE: Control(
         lambda: verdict(
             Decision.DENY, Reason.BUDGET_EXCEEDED, tool="repair_integration",
-            environment=Environment.MOCK, data_class=DataClass.SYNTHETIC, model_calls_used=12,
+            environment=Environment.MOCK, data_class=DataClass.SYNTHETIC, model_calls_used=40,
         ),
         lambda: verdict(
             Decision.ALLOW, Reason.ALLOWED_BY_RULE, tool="repair_integration",
-            environment=Environment.MOCK, data_class=DataClass.SYNTHETIC, model_calls_used=11,
+            environment=Environment.MOCK, data_class=DataClass.SYNTHETIC, model_calls_used=39,
         ),
     ),
     # ---- the floor

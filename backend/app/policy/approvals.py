@@ -81,6 +81,22 @@ def create(
     return row
 
 
+def find_pending(
+    session: Session, clock: Clock, *, tool: str, arguments: dict[str, Any], policy_hash: str
+) -> ApprovalRequest | None:
+    """A still-open request for exactly this call, so a repeated call does not pile up requests."""
+    rows = session.scalars(
+        select(ApprovalRequest).where(
+            ApprovalRequest.tool == tool,
+            ApprovalRequest.request_hash == request_hash(tool, arguments),
+            ApprovalRequest.policy_hash == policy_hash,
+            ApprovalRequest.status == Status.PENDING.value,
+            ApprovalRequest.expires_at > clock.now(),
+        )
+    )
+    return next(iter(rows), None)
+
+
 def get(session: Session, approval_id: str) -> ApprovalRequest | None:
     return session.get(ApprovalRequest, approval_id)
 

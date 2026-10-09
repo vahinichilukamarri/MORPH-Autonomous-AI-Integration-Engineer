@@ -17,7 +17,7 @@ from app.policy.models import SIDE_EFFECTS, Effect
 # Capabilities MORPH never exposes as a tool, whatever the policy says (floor F5).
 FORBIDDEN_NAME_PATTERN = re.compile(
     r"(approv|overrid|decide|(set|update|change|edit|modify|reload|replace|delete)_?polic|grad(e|ing)|"
-    r"oracle|bench|answer_key|shell|exec|command|http|fetch|download|read_file|write_file|"
+    r"oracle|bench|answer[_-]?key|shell|exec|command|http|fetch|download|read_file|write_file|"
     r"open_file|(get|read|list|dump)_?env|secret|token|attribute|sudo|admin)",
     re.IGNORECASE,
 )
@@ -72,7 +72,7 @@ class ListAuditEventsArgs(Args):
 
 class IngestContractArgs(SideEffectArgs):
     file: str = Field(min_length=1, max_length=300)
-    name: str = Field(min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9][A-Za-z0-9._\- ]*$")
 
 
 class ProposeMappingArgs(SideEffectArgs):
@@ -80,7 +80,8 @@ class ProposeMappingArgs(SideEffectArgs):
     target_system_version: int = Field(ge=1)
     source_entity: str = Field(min_length=1, max_length=200)
     target_entity: str = Field(min_length=1, max_length=200)
-    requirement: str | None = Field(default=None, max_length=1000)
+    # There is deliberately no free-text "requirement" here: the mapping prompt shows that field to
+    # the model as a trusted section, and text an agent supplies must never be trusted.
 
 
 class GenerateIntegrationArgs(SideEffectArgs):
