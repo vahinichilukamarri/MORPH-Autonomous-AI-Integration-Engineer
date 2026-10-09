@@ -103,10 +103,12 @@ def test_exhaustion_ends_in_human_review_after_exactly_four_calls(
     assert [r.attempt for r in attempts(session, result.run_id)] == [0, 1, 2, 3]
     assert "ruff" not in rig.runner.calls, "a failing AST gate never reaches the tools"
     stages = session.scalars(
-        select(GateResultRow.stage).join(
+        select(GateResultRow.stage)
+        .join(
             RepairAttempt,
             RepairAttempt.integration_version_id == GateResultRow.integration_version_id,
         )
+        .where(RepairAttempt.repair_run_id == result.run_id)
     ).all()
     assert set(stages) == {"ast"}
 

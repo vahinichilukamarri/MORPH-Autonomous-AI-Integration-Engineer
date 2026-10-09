@@ -48,7 +48,7 @@ select = ["E", "F", "I", "UP", "B"]
 strict = true
 plugins = ["pydantic.mypy"]
 mypy_path = "../sandbox/runtime"
-files = ["app", "tests"]
+files = ["app", "tests", "scripts"]
 
 [[tool.mypy.overrides]]
 module = ["fastembed", "fastembed.*"]

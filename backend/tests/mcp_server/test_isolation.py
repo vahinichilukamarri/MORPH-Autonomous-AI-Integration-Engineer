@@ -90,11 +90,11 @@ def test_the_main_paths_do_not_load_the_sdk() -> None:
     assert run_python(code) == "[]"
 
 
-def test_importing_the_package_alone_loads_nothing_but_the_probe_does() -> None:
+def test_importing_the_package_alone_loads_nothing_but_the_server_module_does() -> None:
     bare = (
         "import sys, app.mcp_server;"
         "print(sorted(m for m in sys.modules if m.split('.')[0] == 'mcp'))"
     )
     assert run_python(bare) == "[]"
-    probe = "import sys, app.mcp_server.probe; print('mcp' in sys.modules)"
-    assert run_python(probe) == "True", "control: importing the probe does load the SDK"
+    server = "import sys, app.mcp_server.server; print('mcp' in sys.modules)"
+    assert run_python(server) == "True", "control: importing the server module does load the SDK"

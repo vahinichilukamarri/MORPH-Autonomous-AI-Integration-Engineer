@@ -1,0 +1,15 @@
+{
+  "_note": "An example for any MCP client that starts stdio servers. Replace the path. Values in ${...} are environment variable names, not secrets; how a client expands them differs. Do not save a copy of this file as .mcp.json in the repository root.",
+  "mcpServers": {
+    "morph": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "app.mcp_server"],
+      "cwd": "<path to the repository>/backend",
+      "env": {
+        "MORPH_MCP_ROLE": "reader",
+        "DATABASE_URL": "${DATABASE_URL}",
+        "GROQ_API_KEY": "${GROQ_API_KEY}"
+      }
+    }
+  }
+}

@@ -24,6 +24,8 @@ from app.policy.clock import Clock, SystemClock
 from app.policy.floor import FLOOR_RULES
 from app.policy.loader import LoadedPolicy, PolicyError, load_active
 from app.policy.models import DataClass, Environment
+from app.policy.redact import Redactor
+from app.policy.secrets import known_secrets
 from app.settings import Settings, get_settings
 
 router = APIRouter(tags=["policy"])
@@ -48,7 +50,7 @@ def get_clock() -> Clock:
 
 
 def get_audit_log(clock: Annotated[Clock, Depends(get_clock)]) -> AuditLog:
-    return AuditLog(get_engine(), clock=clock)
+    return AuditLog(get_engine(), clock=clock, redactor=Redactor(known_secrets(get_settings())))
 
 
 PolicyDep = Annotated[LoadedPolicy, Depends(get_policy)]
