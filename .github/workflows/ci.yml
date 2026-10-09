@@ -43,6 +43,8 @@ jobs:
       # must not be weakened.
       - run: uv run python -m app.policy.check
       - run: uv run pytest -q
+      # Runs every pre-registered policy corpus again and fails if docs/policy-eval.md differs.
+      - run: uv run python -m tests.policy.evalkit.report --check
 
   mock-systems:
     runs-on: ubuntu-latest

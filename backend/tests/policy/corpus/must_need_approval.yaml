@@ -1,0 +1,254 @@
+# must_need_approval: generated once from a script, now edited by hand. The counts are fixed in
+# docs/plans/v0.6-m4-preregistration.md and checked by tests/policy/test_corpora.py.
+- id: N-propose_mapping-internal
+  group: model call on data that is not synthetic
+  description: propose_mapping on a mock system whose data is internal
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: &id001
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-propose_mapping-restricted
+  group: model call on data that is not synthetic
+  description: propose_mapping on a mock system whose data is restricted
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: restricted
+  - call:
+      tool: propose_mapping
+      args: *id001
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-propose_mapping-unclassified
+  group: model call on data that is not synthetic
+  description: propose_mapping on a mock system whose data is unclassified
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: unclassified
+  - call:
+      tool: propose_mapping
+      args: *id001
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-generate_integration-L1-internal
+  group: model call on data that is not synthetic
+  description: generate_integration-L1 on a mock system whose data is internal
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: generate_integration
+      args: &id002
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-generate_integration-L1-restricted
+  group: model call on data that is not synthetic
+  description: generate_integration-L1 on a mock system whose data is restricted
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: restricted
+  - call:
+      tool: generate_integration
+      args: *id002
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-generate_integration-L1-unclassified
+  group: model call on data that is not synthetic
+  description: generate_integration-L1 on a mock system whose data is unclassified
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: unclassified
+  - call:
+      tool: generate_integration
+      args: *id002
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-generate_integration-L2-internal
+  group: model call on data that is not synthetic
+  description: generate_integration-L2 on a mock system whose data is internal
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: generate_integration
+      args: &id003
+        mapping_run_id: $w.mapping_run_id
+        condition: L2
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-generate_integration-L2-restricted
+  group: model call on data that is not synthetic
+  description: generate_integration-L2 on a mock system whose data is restricted
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: restricted
+  - call:
+      tool: generate_integration
+      args: *id003
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-generate_integration-L2-unclassified
+  group: model call on data that is not synthetic
+  description: generate_integration-L2 on a mock system whose data is unclassified
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: unclassified
+  - call:
+      tool: generate_integration
+      args: *id003
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-repair_integration-L1R-internal
+  group: model call on data that is not synthetic
+  description: repair_integration-L1R on a mock system whose data is internal
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: repair_integration
+      args: &id004
+        mapping_run_id: $w.mapping_run_id
+        condition: L1R
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-repair_integration-L1R-restricted
+  group: model call on data that is not synthetic
+  description: repair_integration-L1R on a mock system whose data is restricted
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: restricted
+  - call:
+      tool: repair_integration
+      args: *id004
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-repair_integration-L1R-unclassified
+  group: model call on data that is not synthetic
+  description: repair_integration-L1R on a mock system whose data is unclassified
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: unclassified
+  - call:
+      tool: repair_integration
+      args: *id004
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-repair_integration-L2R-internal
+  group: model call on data that is not synthetic
+  description: repair_integration-L2R on a mock system whose data is internal
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: repair_integration
+      args: &id005
+        mapping_run_id: $w.mapping_run_id
+        condition: L2R
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-repair_integration-L2R-restricted
+  group: model call on data that is not synthetic
+  description: repair_integration-L2R on a mock system whose data is restricted
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: restricted
+  - call:
+      tool: repair_integration
+      args: *id005
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true
+- id: N-repair_integration-L2R-unclassified
+  group: model call on data that is not synthetic
+  description: repair_integration-L2R on a mock system whose data is unclassified
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: unclassified
+  - call:
+      tool: repair_integration
+      args: *id005
+  expect:
+    status: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    handler: not_run
+    self_describing: true

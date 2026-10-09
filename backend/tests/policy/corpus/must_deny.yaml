@@ -1,0 +1,1141 @@
+# must_deny: generated once from a script, now edited by hand. The counts are fixed in
+# docs/plans/v0.6-m4-preregistration.md and checked by tests/policy/test_corpora.py.
+- id: D-ROLE-1
+  group: role scope
+  description: a reader calls ingest_contract
+  steps:
+  - rig:
+      role: reader
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: ingest_contract
+      args:
+        file: crm.v1.json
+        name: crm-role
+  expect:
+    status: denied
+    reason: ROLE_NOT_PERMITTED
+    handler: not_run
+- id: D-ROLE-2
+  group: role scope
+  description: a reader calls propose_mapping
+  steps:
+  - rig:
+      role: reader
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: propose_mapping
+      args: &id003
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+  expect:
+    status: denied
+    reason: ROLE_NOT_PERMITTED
+    handler: not_run
+- id: D-ROLE-3
+  group: role scope
+  description: a reader calls generate_integration
+  steps:
+  - rig:
+      role: reader
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: &id001
+        mapping_run_id: $w.mapping_run_id
+        condition: D
+  expect:
+    status: denied
+    reason: ROLE_NOT_PERMITTED
+    handler: not_run
+- id: D-ROLE-4
+  group: role scope
+  description: a reader calls run_generated_tests
+  steps:
+  - rig:
+      role: reader
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: 1
+        version: 1
+  expect:
+    status: denied
+    reason: ROLE_NOT_PERMITTED
+    handler: not_run
+- id: D-ROLE-5
+  group: role scope
+  description: a reader calls repair_integration
+  steps:
+  - rig:
+      role: reader
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args: &id002
+        mapping_run_id: $w.mapping_run_id
+        condition: L2R
+  expect:
+    status: denied
+    reason: ROLE_NOT_PERMITTED
+    handler: not_run
+- id: D-NAME-1
+  group: tool that must not exist
+  description: a call to approve_mapping
+  steps:
+  - call:
+      tool: approve_mapping
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-2
+  group: tool that must not exist
+  description: a call to override_mapping
+  steps:
+  - call:
+      tool: override_mapping
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-3
+  group: tool that must not exist
+  description: a call to decide_approval
+  steps:
+  - call:
+      tool: decide_approval
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-4
+  group: tool that must not exist
+  description: a call to set_policy_attributes
+  steps:
+  - call:
+      tool: set_policy_attributes
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-5
+  group: tool that must not exist
+  description: a call to update_policy
+  steps:
+  - call:
+      tool: update_policy
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-6
+  group: tool that must not exist
+  description: a call to grade_integration
+  steps:
+  - call:
+      tool: grade_integration
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-7
+  group: tool that must not exist
+  description: a call to run_oracle
+  steps:
+  - call:
+      tool: run_oracle
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-8
+  group: tool that must not exist
+  description: a call to run_bench
+  steps:
+  - call:
+      tool: run_bench
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-9
+  group: tool that must not exist
+  description: a call to http_get
+  steps:
+  - call:
+      tool: http_get
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-10
+  group: tool that must not exist
+  description: a call to run_shell
+  steps:
+  - call:
+      tool: run_shell
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-11
+  group: tool that must not exist
+  description: a call to read_file
+  steps:
+  - call:
+      tool: read_file
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-NAME-12
+  group: tool that must not exist
+  description: a call to read_env
+  steps:
+  - call:
+      tool: read_env
+      args:
+        anything: at all
+  expect:
+    status: denied
+    reason: UNKNOWN_TOOL
+    handler: not_run
+- id: D-SCHEMA-1
+  group: schema
+  description: an extra field naming a policy override
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: get_system
+      args:
+        system_id: 1
+        policy: allow_all
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-2
+  group: schema
+  description: a string id
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: get_system
+      args:
+        system_id: one
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-3
+  group: schema
+  description: a negative id
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: get_system
+      args:
+        system_id: -1
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-4
+  group: schema
+  description: a missing field
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: get_system
+      args: {}
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-5
+  group: schema
+  description: a name over 200 characters
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: ingest_contract
+      args:
+        file: crm.v1.json
+        name: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-6
+  group: schema
+  description: a malformed approval id
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: apr_nonsense
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-7
+  group: schema
+  description: a repair call with both start and resume
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L2R
+        run_id: 1
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-8
+  group: schema
+  description: a repair call with neither
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args: {}
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-SCHEMA-9
+  group: schema
+  description: a page size above the maximum
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: list_systems
+      args:
+        limit: 101
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-PATH-1
+  group: ingest path
+  description: '`..` at the start'
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: ../crm.v1.json
+        name: crm-path
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-2
+  group: ingest path
+  description: '`..` inside'
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: sub/../../crm.v1.json
+        name: crm-path
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-3
+  group: ingest path
+  description: a backslash `..`
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: ..\crm.v1.json
+        name: crm-path
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-4
+  group: ingest path
+  description: a POSIX absolute path
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: /etc/passwd
+        name: crm-path
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-5
+  group: ingest path
+  description: a Windows drive path
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: C:\Windows\System32\x.json
+        name: crm-path
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-6
+  group: ingest path
+  description: a UNC path
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: \\server\share\x.json
+        name: crm-path
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-PATH-7
+  group: ingest path
+  description: a NUL byte
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: "a\0b.json"
+        name: crm-path
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-8
+  group: ingest path
+  description: a link to a file outside the root
+  steps:
+  - link:
+      name: escape_file
+      kind: file
+  - call:
+      tool: ingest_contract
+      args:
+        file: escape_file
+        name: crm-link
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-PATH-9
+  group: ingest path
+  description: a link to a directory outside the root
+  steps:
+  - link:
+      name: escape_dir
+      kind: dir
+  - call:
+      tool: ingest_contract
+      args:
+        file: escape_dir/secret.json
+        name: crm-link
+  expect:
+    status: denied
+    reason: PATH_ESCAPE
+    handler: not_run
+- id: D-URL-1
+  group: ingest URL
+  description: a link-local metadata address
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: http://169.254.169.254/latest/meta-data
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-URL-2
+  group: ingest URL
+  description: https
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: https://example.com/openapi.json
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-URL-3
+  group: ingest URL
+  description: file://
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: file:///etc/passwd
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-URL-4
+  group: ingest URL
+  description: ftp://
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: ftp://host/spec.json
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-URL-5
+  group: ingest URL
+  description: loopback with a port
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: http://127.0.0.1:8101/openapi.json
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-URL-6
+  group: ingest URL
+  description: a scheme-relative //host
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: //evil.example/spec.json
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-URL-7
+  group: ingest URL
+  description: a URL in the name field
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: crm.v1.json
+        name: http://evil.example
+  expect:
+    status: denied
+    reason: SCHEMA_INVALID
+    handler: not_run
+- id: D-URL-8
+  group: ingest URL
+  description: an upper-case scheme
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: HTTP://UPPER.EXAMPLE/x
+        name: crm-url
+  expect:
+    status: denied
+    reason: URL_DENIED
+    handler: not_run
+- id: D-EXEC-gen-staging
+  group: code on a non-mock target
+  description: generate_integration (D) on a staging system
+  steps:
+  - world:
+      name: w
+      environment: staging
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-repair-staging
+  group: code on a non-mock target
+  description: repair_integration on a staging system
+  steps:
+  - world:
+      name: w
+      environment: staging
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args: *id002
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-tests-staging
+  group: code on a non-mock target
+  description: run_generated_tests on a staging system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+      save: gen
+  - attributes:
+      world: w
+      environment: staging
+      data_class: synthetic
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-gen-production
+  group: code on a non-mock target
+  description: generate_integration (D) on a production system
+  steps:
+  - world:
+      name: w
+      environment: production
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-repair-production
+  group: code on a non-mock target
+  description: repair_integration on a production system
+  steps:
+  - world:
+      name: w
+      environment: production
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args: *id002
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-tests-production
+  group: code on a non-mock target
+  description: run_generated_tests on a production system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+      save: gen
+  - attributes:
+      world: w
+      environment: production
+      data_class: synthetic
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-gen-unknown
+  group: code on a non-mock target
+  description: generate_integration (D) on a unknown system
+  steps:
+  - world:
+      name: w
+      environment: unknown
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-repair-unknown
+  group: code on a non-mock target
+  description: repair_integration on a unknown system
+  steps:
+  - world:
+      name: w
+      environment: unknown
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args: *id002
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-EXEC-tests-unknown
+  group: code on a non-mock target
+  description: run_generated_tests on a unknown system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+      save: gen
+  - attributes:
+      world: w
+      environment: unknown
+      data_class: synthetic
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run
+- id: D-BUDGET-1
+  group: budget
+  description: model calls used up, then another model call
+  steps:
+  - rig:
+      limits:
+        max_model_calls: 3
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: propose_mapping
+      args: *id003
+      save: first
+  - call:
+      tool: propose_mapping
+      args: *id003
+  expect:
+    status: denied
+    reason: BUDGET_EXCEEDED
+    handler: not_run
+- id: D-BUDGET-2
+  group: budget
+  description: sandbox runs used up, then run_generated_tests
+  steps:
+  - rig:
+      limits:
+        max_sandbox_runs: 2
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+      save: gen
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect:
+    status: denied
+    reason: BUDGET_EXCEEDED
+    handler: not_run
+- id: D-BUDGET-3
+  group: budget
+  description: the model budget runs out in the middle of a repair run
+  steps:
+  - rig:
+      limits:
+        max_model_calls: 2
+      replies:
+      - not json
+      - not json 2
+      - x
+      - y
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args: *id002
+  expect:
+    status: budget_exceeded
+    reason: BUDGET_EXCEEDED
+    handler: ran
+- id: D-BUDGET-4
+  group: budget
+  description: the sandbox budget runs out in the middle of a generation
+  steps:
+  - rig:
+      limits:
+        max_sandbox_runs: 1
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id001
+  expect:
+    status: budget_exceeded
+    reason: BUDGET_EXCEEDED
+    handler: ran
+- id: D-APPROVAL-1
+  group: approval abuse
+  description: a consumed approval replayed
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: &id004
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+      save: used
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: CONSUMED
+- id: D-APPROVAL-2
+  group: approval abuse
+  description: an approval for different arguments
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: *id004
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: Other
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: REQUEST_MISMATCH
+- id: D-APPROVAL-3
+  group: approval abuse
+  description: an approval for a different tool
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: *id004
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: REQUEST_MISMATCH
+- id: D-APPROVAL-4
+  group: approval abuse
+  description: an expired approval
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: *id004
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - clock:
+      seconds: 1900
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: EXPIRED
+- id: D-APPROVAL-5
+  group: approval abuse
+  description: an approval after a change of policy
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: *id004
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - switch_policy:
+      limits:
+        max_model_calls: 30
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: POLICY_CHANGED
+- id: D-APPROVAL-6
+  group: approval abuse
+  description: an undecided approval
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: *id004
+      save: a
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: NOT_DECIDED
+- id: D-APPROVAL-7
+  group: approval abuse
+  description: a denied approval
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args: *id004
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: false
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: DENIED
+- id: D-APPROVAL-8
+  group: approval abuse
+  description: an unknown approval id
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: apr_0123456789abcdef
+  expect:
+    status: denied
+    reason: APPROVAL_INVALID
+    handler: not_run
+    body:
+      approval_check: UNKNOWN
+- id: D-APPROVAL-9
+  group: approval abuse
+  description: a valid approval on a call the floor denies (the target became production)
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - attributes:
+      world: w
+      environment: production
+      data_class: internal
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+        approval_id: $a.approval_id
+  expect:
+    status: denied
+    reason: EXEC_TARGET_NOT_MOCK
+    handler: not_run

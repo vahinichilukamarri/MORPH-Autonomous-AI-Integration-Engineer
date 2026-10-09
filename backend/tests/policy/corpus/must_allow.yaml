@@ -1,0 +1,551 @@
+# must_allow: generated once from a script, now edited by hand. The counts are fixed in
+# docs/plans/v0.6-m4-preregistration.md and checked by tests/policy/test_corpora.py.
+- id: A-READ-reader-list_systems
+  group: read tools
+  description: a reader calls list_systems
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: reader
+  - call:
+      tool: list_systems
+      args: &id003 {}
+  expect: &id001
+    status: ok
+    handler: ran
+- id: A-READ-reader-get_system
+  group: read tools
+  description: a reader calls get_system
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: reader
+  - call:
+      tool: get_system
+      args: &id004
+        system_id: $w.source_system_id
+  expect: *id001
+- id: A-READ-reader-get_mapping_run
+  group: read tools
+  description: a reader calls get_mapping_run
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: reader
+  - call:
+      tool: get_mapping_run
+      args: &id005
+        mapping_run_id: $w.mapping_run_id
+  expect: *id001
+- id: A-READ-reader-get_integration
+  group: read tools
+  description: a reader calls get_integration
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: &id002
+        mapping_run_id: $w.mapping_run_id
+        condition: D
+      save: gen
+  - role:
+      role: reader
+  - call:
+      tool: get_integration
+      args: &id006
+        integration_id: $gen.result.integration_id
+  expect: *id001
+- id: A-READ-reader-get_integration_files
+  group: read tools
+  description: a reader calls get_integration_files
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id002
+      save: gen
+  - role:
+      role: reader
+  - call:
+      tool: get_integration_files
+      args: &id007
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect: *id001
+- id: A-READ-reader-get_repair_run
+  group: read tools
+  description: a reader calls get_repair_run
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - replies:
+      replies:
+      - GOOD_L2
+  - call:
+      tool: repair_integration
+      args: &id008
+        mapping_run_id: $w.mapping_run_id
+        condition: L2R
+      save: rep
+  - role:
+      role: reader
+  - call:
+      tool: get_repair_run
+      args: &id009
+        run_id: $rep.result.repair_run_id
+  expect: *id001
+- id: A-READ-reader-list_audit_events
+  group: read tools
+  description: a reader calls list_audit_events
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: reader
+  - call:
+      tool: list_audit_events
+      args: &id010
+        limit: 20
+  expect: *id001
+- id: A-READ-reader-describe_policy
+  group: read tools
+  description: a reader calls describe_policy
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: reader
+  - call:
+      tool: describe_policy
+      args: &id011 {}
+  expect: *id001
+- id: A-READ-operator-list_systems
+  group: read tools
+  description: a operator calls list_systems
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: operator
+  - call:
+      tool: list_systems
+      args: *id003
+  expect: *id001
+- id: A-READ-operator-get_system
+  group: read tools
+  description: a operator calls get_system
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: operator
+  - call:
+      tool: get_system
+      args: *id004
+  expect: *id001
+- id: A-READ-operator-get_mapping_run
+  group: read tools
+  description: a operator calls get_mapping_run
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: operator
+  - call:
+      tool: get_mapping_run
+      args: *id005
+  expect: *id001
+- id: A-READ-operator-get_integration
+  group: read tools
+  description: a operator calls get_integration
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id002
+      save: gen
+  - role:
+      role: operator
+  - call:
+      tool: get_integration
+      args: *id006
+  expect: *id001
+- id: A-READ-operator-get_integration_files
+  group: read tools
+  description: a operator calls get_integration_files
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id002
+      save: gen
+  - role:
+      role: operator
+  - call:
+      tool: get_integration_files
+      args: *id007
+  expect: *id001
+- id: A-READ-operator-get_repair_run
+  group: read tools
+  description: a operator calls get_repair_run
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - replies:
+      replies:
+      - GOOD_L2
+  - call:
+      tool: repair_integration
+      args: *id008
+      save: rep
+  - role:
+      role: operator
+  - call:
+      tool: get_repair_run
+      args: *id009
+  expect: *id001
+- id: A-READ-operator-list_audit_events
+  group: read tools
+  description: a operator calls list_audit_events
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: operator
+  - call:
+      tool: list_audit_events
+      args: *id010
+  expect: *id001
+- id: A-READ-operator-describe_policy
+  group: read tools
+  description: a operator calls describe_policy
+  steps:
+  - rig:
+      role: operator
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - role:
+      role: operator
+  - call:
+      tool: describe_policy
+      args: *id011
+  expect: *id001
+- id: A-INGEST-1
+  group: ingest
+  description: an operator ingests crm.v1.json
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: crm.v1.json
+        name: allow-1-crm
+  expect: *id001
+- id: A-INGEST-2
+  group: ingest
+  description: an operator ingests support.v1.json
+  steps:
+  - call:
+      tool: ingest_contract
+      args:
+        file: support.v1.json
+        name: allow-2-sup
+  expect: *id001
+- id: A-GEN-D-synthetic
+  group: deterministic generation
+  description: an operator generates (D) on a mock, synthetic system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id002
+  expect: *id001
+- id: A-TESTS-synthetic
+  group: tests in the sandbox
+  description: an operator runs the generated tests on a mock, synthetic system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args: *id002
+      save: gen
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect: *id001
+- id: A-GEN-D-internal
+  group: deterministic generation
+  description: an operator generates (D) on a mock, internal system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: generate_integration
+      args: *id002
+  expect: *id001
+- id: A-TESTS-internal
+  group: tests in the sandbox
+  description: an operator runs the generated tests on a mock, internal system
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: generate_integration
+      args: *id002
+      save: gen
+  - call:
+      tool: run_generated_tests
+      args:
+        integration_id: $gen.result.integration_id
+        version: $gen.result.version
+  expect: *id001
+- id: A-MODEL-propose
+  group: model on synthetic data
+  description: propose_mapping
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+  expect: *id001
+- id: A-MODEL-gen-L1
+  group: model on synthetic data
+  description: generate_integration L1
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+  expect: *id001
+- id: A-MODEL-gen-L2
+  group: model on synthetic data
+  description: generate_integration L2
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L2
+  expect: *id001
+- id: A-MODEL-repair-L1R
+  group: model on synthetic data
+  description: repair_integration L1R start
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - call:
+      tool: repair_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1R
+  expect: *id001
+- id: A-MODEL-repair-L2R
+  group: model on synthetic data
+  description: repair_integration L2R start
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - replies:
+      replies:
+      - GOOD_L2
+  - call:
+      tool: repair_integration
+      args: *id008
+  expect: *id001
+- id: A-MODEL-repair-resume
+  group: model on synthetic data
+  description: repair_integration resume
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: synthetic
+  - replies:
+      replies:
+      - GOOD_L2
+  - call:
+      tool: repair_integration
+      args: *id008
+      save: rep
+  - call:
+      tool: repair_integration
+      args:
+        run_id: $rep.result.repair_run_id
+  expect: *id001
+- id: A-APPROVED-propose
+  group: approved calls
+  description: propose_mapping on internal data, approved
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: internal
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - call:
+      tool: propose_mapping
+      args:
+        source_system_version: $w.source_version_id
+        target_system_version: $w.target_version_id
+        source_entity: Customer
+        target_entity: User
+        approval_id: $a.approval_id
+  expect: *id001
+- id: A-APPROVED-gen-L1
+  group: approved calls
+  description: generate_integration L1 on restricted data, approved
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: restricted
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - call:
+      tool: generate_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L1
+        approval_id: $a.approval_id
+  expect: *id001
+- id: A-APPROVED-repair
+  group: approved calls
+  description: repair_integration on an unclassified mock system, approved
+  steps:
+  - world:
+      name: w
+      environment: mock
+      data_class: unclassified
+  - replies:
+      replies:
+      - GOOD_L2
+  - call:
+      tool: repair_integration
+      args: *id008
+      save: a
+  - decide:
+      approval: $a.approval_id
+      approve: true
+  - call:
+      tool: repair_integration
+      args:
+        mapping_run_id: $w.mapping_run_id
+        condition: L2R
+        approval_id: $a.approval_id
+  expect: *id001
