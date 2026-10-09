@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { recorded } from '../data/recorded'
-import { Review } from './Review'
+import Review from './Review'
 
 describe('Review gate', () => {
   it('lists every blocking field of the as-proposed inputs', () => {

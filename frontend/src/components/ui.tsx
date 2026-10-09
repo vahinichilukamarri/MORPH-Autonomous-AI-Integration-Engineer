@@ -19,36 +19,54 @@ export function Chip({ children, title }: { children: ReactNode; title?: string 
   )
 }
 
-export function Panel({
+/** A titled surface. `labelledBy` names the section for assistive technology. */
+export function Card({
   title,
   actions,
   children,
   className = '',
   labelledBy,
+  flush = false,
 }: {
   title?: ReactNode
   actions?: ReactNode
   children: ReactNode
   className?: string
   labelledBy?: string
+  flush?: boolean
 }) {
   return (
-    <section className={`panel ${className}`} aria-labelledby={labelledBy}>
+    <section className={`card ${className}`} aria-labelledby={title ? labelledBy : undefined}>
       {(title || actions) && (
-        <header className="panel__head">
-          {title && <h2 id={labelledBy} className="panel__title">{title}</h2>}
-          {actions && <div className="panel__actions">{actions}</div>}
+        <header className="card__head">
+          {title && (
+            <h2 id={labelledBy} className="card__title">
+              {title}
+            </h2>
+          )}
+          {actions && <div className="card__actions">{actions}</div>}
         </header>
       )}
-      <div className="panel__body">{children}</div>
+      <div className={flush ? 'card__body card__body--flush' : 'card__body'}>{children}</div>
     </section>
   )
 }
 
-export function PageHead({ title, lede, aside }: { title: string; lede: ReactNode; aside?: ReactNode }) {
+export function PageHead({
+  eyebrow,
+  title,
+  lede,
+  aside,
+}: {
+  eyebrow?: ReactNode
+  title: string
+  lede: ReactNode
+  aside?: ReactNode
+}) {
   return (
     <header className="page__head">
-      <div>
+      <div className="page__intro">
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h1>{title}</h1>
         <p className="lede">{lede}</p>
       </div>
@@ -57,7 +75,7 @@ export function PageHead({ title, lede, aside }: { title: string; lede: ReactNod
   )
 }
 
-export function Metric({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone }) {
+export function Metric({ label, value, sub, tone }: { label: ReactNode; value: ReactNode; sub?: ReactNode; tone?: Tone }) {
   return (
     <div className={`metric${tone ? ` metric--${tone}` : ''}`}>
       <div className="metric__label">{label}</div>
@@ -67,6 +85,7 @@ export function Metric({ label, value, sub, tone }: { label: string; value: Reac
   )
 }
 
+/** Shimmering placeholder lines; the shimmer is CSS and stops under reduced motion. */
 export function Skeleton({ lines = 3, label = 'Loading' }: { lines?: number; label?: string }) {
   return (
     <div className="skeleton" role="status" aria-live="polite">
@@ -78,11 +97,12 @@ export function Skeleton({ lines = 3, label = 'Loading' }: { lines?: number; lab
   )
 }
 
-export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="state state--empty">
       <div className="state__title">{title}</div>
       {children && <div className="state__body">{children}</div>}
+      {action}
     </div>
   )
 }
@@ -93,7 +113,7 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry?: () => v
       <div className="state__title">Could not load this</div>
       <div className="state__body mono">{error.message}</div>
       {onRetry && (
-        <button type="button" className="button" onClick={onRetry}>
+        <button type="button" className="btn btn--secondary" onClick={onRetry}>
           Retry
         </button>
       )}
@@ -105,10 +125,15 @@ export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="kbd">{children}</kbd>
 }
 
-export function FixtureBanner({ children }: { children: ReactNode }) {
+/** The on-screen label for anything that is not built yet. In code these are FIXTURE data. */
+export function PreviewTag() {
+  return <span className="preview-tag">Preview</span>
+}
+
+export function PreviewBanner({ children }: { children: ReactNode }) {
   return (
-    <div className="fixture-banner" role="note">
-      <strong>FIXTURE</strong>
+    <div className="preview-banner" role="note">
+      <PreviewTag />
       <span>{children}</span>
     </div>
   )
@@ -171,4 +196,32 @@ export function Segmented<T extends string>({
       })}
     </div>
   )
+}
+
+/** Renders the small markdown subset used in README cells: `code`, **bold** and [links](path). Links
+ * to repository paths go to the file on GitHub. */
+export function InlineMarkdown({ text, repoUrl }: { text: string; repoUrl: string }) {
+  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g).filter(Boolean)
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (p.startsWith('`')) return <code key={i}>{p.slice(1, -1)}</code>
+        if (p.startsWith('**')) return <strong key={i}>{p.slice(2, -2)}</strong>
+        const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(p)
+        if (link) {
+          return (
+            <a key={i} href={repoLink(repoUrl, link[2])} target="_blank" rel="noreferrer">
+              {link[1]}
+            </a>
+          )
+        }
+        return <span key={i}>{p}</span>
+      })}
+    </>
+  )
+}
+
+export function repoLink(repoUrl: string, path: string): string {
+  if (/^https?:/.test(path)) return path
+  return `${repoUrl}/${path.endsWith('/') ? 'tree' : 'blob'}/main/${path}`
 }

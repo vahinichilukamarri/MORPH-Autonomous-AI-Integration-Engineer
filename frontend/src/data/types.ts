@@ -94,6 +94,36 @@ export interface RunInfo {
   startMode: string | null
 }
 
+/** A row of the README design-principles table: the claim and the files that enforce it. */
+export interface Guarantee {
+  title: string
+  claim: string
+  enforcedIn: { label: string; path: string }[]
+}
+
+export type MilestoneState = 'done' | 'in_progress' | 'planned'
+
+/** A row of the README status table. */
+export interface RoadmapItem {
+  tag: string
+  scope: string
+  status: string
+  state: MilestoneState
+}
+
+/** A bullet of the README "Honest findings" section. */
+export interface Finding {
+  headline: string
+  detail: string
+}
+
+export interface SiteData {
+  repoUrl: string
+  guarantees: Guarantee[]
+  roadmap: RoadmapItem[]
+  findings: Finding[]
+}
+
 export interface DemoData {
   generatedFrom: SourceFile[]
   runs: RunInfo[]
@@ -105,6 +135,7 @@ export interface DemoData {
     model: string
     fields: ProposedField[]
   }
+  site: SiteData
 }
 
 export interface Reply {

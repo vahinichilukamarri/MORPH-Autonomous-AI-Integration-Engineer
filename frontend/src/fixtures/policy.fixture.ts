@@ -2,7 +2,7 @@
  * FIXTURE: illustrative policy, audit and approval data in the shapes of the v0.6 plan.
  * Not a recorded run and not produced by MORPH. The v0.6 policy layer and its REST endpoints
  * (GET /policy/active, /audit/events, /audit/verify, /approvals, POST /approvals/{id}/decide)
- * are not built yet. The hash chain is computed in the browser over these fixture rows, so the
+ * do not exist on this branch yet. The hash chain is computed in the browser over these fixture rows, so the
  * verification is real but only shows that the fixture is self-consistent.
  */
 import type {
@@ -15,7 +15,7 @@ import type {
   PolicyRule,
 } from '../api/policyTypes'
 
-const POLICY_HASH = 'FIXTURE-policy-hash'
+const POLICY_HASH = 'preview-policy-hash'
 
 function rule(
   id: string,
@@ -36,7 +36,7 @@ function rule(
 }
 
 const POLICY: ActivePolicy = {
-  version: 'v1 (FIXTURE)',
+  version: 'v1 (preview)',
   policyHash: POLICY_HASH,
   file: 'backend/policy/morph-policy-v1.yaml (planned)',
   rules: [
@@ -151,7 +151,7 @@ export function createFixturePolicyApi(): PolicyApi {
   const log: Unhashed[] = ROWS.map((r, i) => unhashed(r, i + 1))
   const approvals: Approval[] = [
     {
-      id: 'apr-fixture-1',
+      id: 'apr-preview-1',
       tool: 'repair_integration',
       principal: 'stdio:operator',
       requestHash: 'FIXTURE-request-c',
@@ -160,7 +160,7 @@ export function createFixturePolicyApi(): PolicyApi {
       reasonCode: 'REPAIR_NEEDS_APPROVAL',
     },
     {
-      id: 'apr-fixture-2',
+      id: 'apr-preview-2',
       tool: 'propose_mapping',
       principal: 'stdio:operator',
       requestHash: 'FIXTURE-request-e',

@@ -39,6 +39,10 @@
     {
       "path": "bench/replays/crm_customer_to_support_user.expected.json",
       "sha256": "92a4cf2485df42155d0d8a35a6aa35c5d1c59efc759e81f60ad6cfadb30a64b2"
+    },
+    {
+      "path": "README.md",
+      "sha256": "de7205eef7bb99a94b5b36806e2aa7db32e7724684fe9d4b9f90a9a7f10c7d2d"
     }
   ],
   "runs": [
@@ -1648,6 +1652,167 @@
         "targetField": "createdAt",
         "proposed": "TRANSFORMATION [created_at] COPY>FORMAT_DATETIME",
         "matchesAnswerKey": true
+      }
+    ]
+  },
+  "site": {
+    "repoUrl": "https://github.com/vahinichilukamarri/MORPH-Autonomous-AI-Integration-Engineer",
+    "guarantees": [
+      {
+        "title": "Models propose, code decides",
+        "claim": "A model is called only for mapping, code or strategy generation and repair proposals; parsing, validation, planning, gating, test execution and state transitions are plain code. Every model output is parsed into a Pydantic model; invalid output is a recorded result, not a crash.",
+        "enforcedIn": [
+          {
+            "label": "backend/app/llm/",
+            "path": "backend/app/llm/"
+          },
+          {
+            "label": "backend/app/mapping/",
+            "path": "backend/app/mapping/"
+          },
+          {
+            "label": "backend/app/repair/nodes.py",
+            "path": "backend/app/repair/nodes.py"
+          }
+        ]
+      },
+      {
+        "title": "Review gate",
+        "claim": "Review gate: if a required, writable target field is not approved, the integration is `BLOCKED_PENDING_REVIEW` and no model is called.",
+        "enforcedIn": [
+          {
+            "label": "backend/app/codegen/review_gate.py",
+            "path": "backend/app/codegen/review_gate.py"
+          }
+        ]
+      },
+      {
+        "title": "Gates never loosen",
+        "claim": "Gates never loosen. The model can only change its own file; guards reject changed base tests (G2), suppression comments (G3), more type escapes than the previous attempt (G4) and dropped mapped fields (G5).",
+        "enforcedIn": [
+          {
+            "label": "backend/app/repair/guards.py",
+            "path": "backend/app/repair/guards.py"
+          }
+        ]
+      },
+      {
+        "title": "Sandbox containment",
+        "claim": "Generated code runs only in the sandbox: read-only root, internal network with only the mocks, no capabilities, 256 MB, 0.5 CPU, 64 processes, 60 s, verified inside the container before anything runs.",
+        "enforcedIn": [
+          {
+            "label": "docs/sandbox.md",
+            "path": "docs/sandbox.md"
+          },
+          {
+            "label": "backend/app/codegen/sandbox.py",
+            "path": "backend/app/codegen/sandbox.py"
+          }
+        ]
+      },
+      {
+        "title": "Oracle isolation",
+        "claim": "The oracle never feeds repair. A source-level test forbids the repair package from importing bench, oracle or answer-key code, importing dynamically, or reaching a live provider.",
+        "enforcedIn": [
+          {
+            "label": "backend/tests/repair/test_isolation.py",
+            "path": "backend/tests/repair/test_isolation.py"
+          },
+          {
+            "label": "backend/tests/test_architecture.py",
+            "path": "backend/tests/test_architecture.py"
+          }
+        ]
+      },
+      {
+        "title": "Replayable runs",
+        "claim": "Every real model call is recorded and replayed offline in CI; reports are regenerated from committed results and fail on any undeclared edit.",
+        "enforcedIn": [
+          {
+            "label": "bench/replays/",
+            "path": "bench/replays/"
+          },
+          {
+            "label": "bench/scripts/render_reports.py",
+            "path": "bench/scripts/render_reports.py"
+          }
+        ]
+      }
+    ],
+    "roadmap": [
+      {
+        "tag": "v0.1-foundation",
+        "scope": "Skeleton, compose, mock CRM and Support with OpenAPI, failure injection, answer-key format, CI",
+        "status": "Done (tagged)",
+        "state": "done"
+      },
+      {
+        "tag": "v0.2-discovery",
+        "scope": "OpenAPI to system model, persistence, embeddings in pgvector",
+        "status": "Done (tagged)",
+        "state": "done"
+      },
+      {
+        "tag": "v0.3-mapping",
+        "scope": "Model mapping proposals, deterministic validation, confidence, accuracy against answer keys",
+        "status": "Done (tagged; validator v2 rescoring tagged `v0.3.1-validator`)",
+        "state": "done"
+      },
+      {
+        "tag": "v0.4-codegen",
+        "scope": "Generated integration in the Docker sandbox, static gate, hidden oracle, D/L1/L2 evaluation",
+        "status": "Done (tagged)",
+        "state": "done"
+      },
+      {
+        "tag": "v0.5-repair",
+        "scope": "Bounded LangGraph repair loop, guards, fixed-start evaluation",
+        "status": "Done for the fixed-start run (sub-milestones tagged `v0.5-m2`, `v0.5-m3`); the fresh-start phase is planned and needs its own approval",
+        "state": "done"
+      },
+      {
+        "tag": "v0.6-mcp-policy",
+        "scope": "Capabilities as MCP tools, a policy layer gating every tool call",
+        "status": "In progress: M0 (MCP SDK spike and import-isolation tests) done; policy core, audit, MCP gateway and evaluation planned",
+        "state": "in_progress"
+      },
+      {
+        "tag": "v0.7-ui",
+        "scope": "Workspace: canvas, activity stream, mapping, code, test lab, repair view",
+        "status": "In progress on branch `ui/v0.7`: demo mode, six screens, tests; policy screen uses fixtures until v0.6",
+        "state": "in_progress"
+      },
+      {
+        "tag": "v0.8-bench",
+        "scope": "MORPH-Bench: 25 to 30 scenarios, metrics from real runs, report",
+        "status": "Planned",
+        "state": "planned"
+      }
+    ],
+    "findings": [
+      {
+        "headline": "READY is not correct.",
+        "detail": "S3 L1R passed every gate and test MORPH controls and still failed 14 oracle checks. A pipeline that reports its own gates as success would have counted it."
+      },
+      {
+        "headline": "Negative results are reported as results.",
+        "detail": "L1 and L2 reached READY on 0 of 3 each in v0.4, and L2R on 0 of 3 in v0.5. They stay in every denominator."
+      },
+      {
+        "headline": "Some defects were ours, and were kept frozen.",
+        "detail": "The `__cause__` prompt/gate contradiction, the unstated `UPSERT` rule, and an AST rule that flags benign long test strings as secrets were found during the runs. Fixing them mid-experiment would have mixed two systems in one measurement, so they are tagged per unit and left for a separately labelled v2 run."
+      },
+      {
+        "headline": "The oracle was revised after D had run against it (r1).",
+        "detail": "Of 413 checks, 14 were revised and 98 added after the first D run, so D's 3/3 is not a blind result. Every change and its reason is in [docs/milestones.md](docs/milestones.md)."
+      },
+      {
+        "headline": "Post-run edits are declared.",
+        "detail": "A manual edit to the v0.4 results file (the model label on 12 rows) is recorded with its scope and evidence in [bench/results/codegen-v0.4/provenance.json](bench/results/codegen-v0.4/provenance.json); the v0.5 run declares none."
+      },
+      {
+        "headline": "Repair feedback worked where the signal existed.",
+        "detail": "The validator, guard and AST findings the L1R units were told about were cleared on the next attempt; the `segment` flaw, which no check reports, was not touched."
       }
     ]
   }

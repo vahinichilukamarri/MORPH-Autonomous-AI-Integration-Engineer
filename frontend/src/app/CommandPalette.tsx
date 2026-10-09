@@ -1,5 +1,7 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 
+import { Dialog } from '../components/Dialog'
+import { Icon } from '../components/Icon'
 import { Kbd } from '../components/ui'
 
 export interface Command {
@@ -19,21 +21,21 @@ function matches(command: Command, query: string): boolean {
     .every((word) => haystack.includes(word))
 }
 
-/** Ctrl/Cmd+K palette: type to filter, arrows to move, Enter to run, Escape to close. Focus
- * returns to where it was when the palette closes. */
-export function CommandPalette({ commands, onClose }: { commands: Command[]; onClose: () => void }) {
+/** Ctrl/Cmd+K palette: type to filter, arrows to move, Enter to run, Escape to close. */
+export function CommandPalette({ open, commands, onClose }: { open: boolean; commands: Command[]; onClose: () => void }) {
+  return (
+    <Dialog open={open} onClose={onClose} title="Command palette" hideTitle className="palette" initialFocus="input">
+      <PaletteBody commands={commands} onClose={onClose} />
+    </Dialog>
+  )
+}
+
+function PaletteBody({ commands, onClose }: { commands: Command[]; onClose: () => void }) {
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
-  const input = useRef<HTMLInputElement>(null)
   const listId = useId()
   const results = useMemo(() => commands.filter((c) => matches(c, query)), [commands, query])
   const current = Math.min(active, Math.max(results.length - 1, 0))
-
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
-    input.current?.focus()
-    return () => previous?.focus()
-  }, [])
 
   useEffect(() => {
     document.getElementById(`${listId}-${current}`)?.scrollIntoView?.({ block: 'nearest' })
@@ -46,20 +48,15 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
   }
 
   return (
-    <div className="palette-backdrop" onMouseDown={onClose}>
-      <div
-        className="palette"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command palette"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+    <>
+      <div className="palette__search">
+        <Icon name="search" />
         <input
-          ref={input}
           className="palette__input"
-          placeholder="Jump to a screen, a unit or a setting"
+          placeholder="Jump to a screen, a run, a unit or a setting"
           value={query}
           role="combobox"
+          aria-label="Search commands"
           aria-expanded="true"
           aria-controls={listId}
           aria-activedescendant={results.length ? `${listId}-${current}` : undefined}
@@ -78,23 +75,25 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
             } else if (e.key === 'Enter') {
               e.preventDefault()
               run(results[current])
-            } else if (e.key === 'Escape') {
-              e.preventDefault()
-              onClose()
             } else if (e.key === 'Tab') {
               e.preventDefault()
             }
           }}
         />
-        <ul className="palette__list" id={listId} role="listbox" aria-label="Commands">
-          {results.length === 0 && <li className="palette__empty">No command matches “{query}”.</li>}
-          {results.map((c, i) => (
+        <Kbd>Esc</Kbd>
+      </div>
+      <ul className="palette__list" id={listId} role="listbox" aria-label="Commands">
+        {results.length === 0 && <li className="palette__empty">No command matches “{query}”.</li>}
+        {results.map((c, i) => {
+          const header = i === 0 || results[i - 1].group !== c.group
+          return (
             <li
               key={c.id}
               id={`${listId}-${i}`}
               role="option"
               aria-selected={i === current}
-              className="palette__item"
+              className={`palette__item${header ? ' palette__item--first' : ''}`}
+              data-group={header ? c.group : undefined}
               onMouseMove={() => setActive(i)}
               onClick={() => run(c)}
             >
@@ -102,20 +101,20 @@ export function CommandPalette({ commands, onClose }: { commands: Command[]; onC
               <span className="palette__label">{c.label}</span>
               {c.hint && <span className="palette__hint">{c.hint}</span>}
             </li>
-          ))}
-        </ul>
-        <footer className="palette__foot">
-          <span>
-            <Kbd>↑</Kbd> <Kbd>↓</Kbd> move
-          </span>
-          <span>
-            <Kbd>Enter</Kbd> run
-          </span>
-          <span>
-            <Kbd>Esc</Kbd> close
-          </span>
-        </footer>
-      </div>
-    </div>
+          )
+        })}
+      </ul>
+      <footer className="palette__foot">
+        <span>
+          <Kbd>↑</Kbd> <Kbd>↓</Kbd> move
+        </span>
+        <span>
+          <Kbd>Enter</Kbd> run
+        </span>
+        <span>
+          <Kbd>Esc</Kbd> close
+        </span>
+      </footer>
+    </>
   )
 }

@@ -1,9 +1,12 @@
-import { lazy, type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import * as m from 'motion/react-m'
+import { lazy, type RefObject, Suspense, useEffect, useRef, useState } from 'react'
 
 import { navigate } from '../app/router'
-import { useAppliedTheme } from '../app/theme'
+import { setRun, useRun } from '../app/runs'
+import { useTheme } from '../app/theme'
 import { useAsync } from '../app/useAsync'
-import { Badge, Chip, EmptyState, ErrorState, PageHead, Panel, Segmented, Skeleton } from '../components/ui'
+import { Badge, Card, Chip, EmptyState, ErrorState, PageHead, Segmented, Skeleton } from '../components/ui'
+import { DURATION, EASE, STAGGER } from '../motion/tokens'
 import {
   EXPOSURE_INFO,
   fmt,
@@ -172,7 +175,7 @@ function Diff({ unit, attempt }: { unit: Unit; attempt: Attempt }) {
 
 function DiffLoaded({ unit, attempt }: { unit: Unit; attempt: Attempt }) {
   const [replies, reload] = useAsync(() => loadReplies(), [])
-  const theme = useAppliedTheme()
+  const theme = useTheme()
   if (replies.kind === 'loading') return <Skeleton lines={10} label="Loading the recorded replies" />
   if (replies.kind === 'error') return <ErrorState error={replies.error} onRetry={reload} />
   const prev = unit.attempts.find((a) => a.n === attempt.n - 1)
@@ -211,7 +214,6 @@ function RepairUnit({ unit }: { unit: Unit }) {
   const outcome = outcomeOf(unit)
   const sum = oracleSum(unit)
   const max = recorded.runs.find((r) => r.milestone === 'v0.5')?.maxRepairAttempts
-  const timeline = useMemo(() => unit.attempts, [unit])
 
   return (
     <>
@@ -250,45 +252,88 @@ function RepairUnit({ unit }: { unit: Unit }) {
       </div>
 
       <ol className="timeline" aria-label="Attempts">
-        {timeline.map((a) => (
-          <li key={a.n} className="timeline__step">
-            <button
-              type="button"
-              className={`timeline__node timeline__node--${a.failedStage ? 'fail' : 'ok'}`}
-              aria-pressed={a.n === selected}
-              aria-label={`Attempt ${a.n}: ${a.failedStage ? `failed at ${a.failedStage}` : 'READY'}, ${
-                a.source === 'network' ? 'repair call' : 'seeded v0.4 reply'
-              }${a.guardEnforced.length ? `, guard ${[...new Set(a.guardEnforced)].join(', ')} tripped` : ''}`}
-              onClick={() => setSelected(a.n)}
+        {unit.attempts.map((a, i) => {
+          const isSelected = a.n === selected
+          const guards = [...new Set(a.guardEnforced)]
+          return (
+            <m.li
+              key={a.n}
+              layout
+              className="timeline__step"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: DURATION.slow, ease: EASE.out, delay: i * STAGGER }}
             >
-              <span className="timeline__n mono">Attempt {a.n}</span>
-              <span className="timeline__stage mono">{a.failedStage ?? 'READY'}</span>
-              <span className="timeline__src">{a.source === 'network' ? 'repair call' : 'seeded v0.4'}</span>
-              {a.guardEnforced.length > 0 && <span className="timeline__guard">guard {[...new Set(a.guardEnforced)].join(', ')}</span>}
-            </button>
-          </li>
-        ))}
-        {unit.status === 'HUMAN_REVIEW_REQUIRED' && (
-          <li className="timeline__step timeline__step--end">
-            <span className="timeline__end mono">handed to a person</span>
-          </li>
-        )}
+              <button
+                type="button"
+                className={`timeline__node timeline__node--${a.failedStage ? 'fail' : 'ok'}`}
+                aria-pressed={isSelected}
+                aria-label={`Attempt ${a.n}: ${a.failedStage ? `failed at ${a.failedStage}` : 'READY'}, ${
+                  a.source === 'network' ? 'repair call' : 'seeded v0.4 reply'
+                }${guards.length ? `, guard ${guards.join(', ')} tripped` : ''}`}
+                onClick={() => setSelected(a.n)}
+              >
+                {isSelected && (
+                  <m.span className="timeline__selected" layoutId={`attempt-${unit.key}`} aria-hidden="true" transition={{ duration: DURATION.base, ease: EASE.out }} />
+                )}
+                <span className="timeline__n mono">Attempt {a.n}</span>
+                <span className="timeline__stage mono">{a.failedStage ?? 'READY'}</span>
+                <span className="timeline__src">{a.source === 'network' ? 'repair call' : 'seeded v0.4'}</span>
+                {guards.length > 0 && <span className="timeline__guard">guard {guards.join(', ')}</span>}
+              </button>
+            </m.li>
+          )
+        })}
+        <m.li
+          layout
+          className={`timeline__step timeline__step--end timeline__step--${OUTCOME_TONE[outcome]}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: DURATION.slow, delay: unit.attempts.length * STAGGER }}
+        >
+          <span className="timeline__end mono">{unit.status === 'HUMAN_REVIEW_REQUIRED' ? 'handed to a person' : unit.status}</span>
+        </m.li>
       </ol>
 
       <div className="repair-grid">
-        <Panel title={`Attempt ${attempt.n}`} labelledBy="attempt-detail">
+        <Card title={`Attempt ${attempt.n}`} labelledBy="attempt-detail">
           <AttemptDetail unit={unit} attempt={attempt} />
-        </Panel>
-        <Panel title="Reply diff" labelledBy="reply-diff" className="repair-grid__diff">
+        </Card>
+        <Card title="Reply diff" labelledBy="reply-diff" className="repair-grid__diff">
           <Diff unit={unit} attempt={attempt} />
-        </Panel>
+        </Card>
       </div>
     </>
   )
 }
 
 export default function Repair({ params }: { params: URLSearchParams }) {
-  const unit = REPAIR_UNITS.find((u) => u.key === params.get('unit')) ?? REPAIR_UNITS[0]
+  const run = useRun()
+  const linked = REPAIR_UNITS.find((u) => u.key === params.get('unit'))
+  const unit = linked ?? REPAIR_UNITS[0]
+
+  // A link to a repair unit selects the v0.5 run, which is the only run with a repair loop.
+  useEffect(() => {
+    if (linked && run !== 'v0.5') setRun('v0.5')
+  }, [linked, run])
+
+  if (run === 'v0.4' && !linked) {
+    return (
+      <div className="page">
+        <PageHead eyebrow="Repair attempts" title="Repair attempts" lede="The v0.4 run generated each unit once, with no repair loop." />
+        <EmptyState
+          title="No repair attempts in the v0.4 run"
+          action={
+            <button type="button" className="btn btn--primary" onClick={() => setRun('v0.5')}>
+              Show the repair run (v0.5)
+            </button>
+          }
+        >
+          Repair attempts were recorded in the v0.5 fixed-start run, which started from these v0.4 replies.
+        </EmptyState>
+      </div>
+    )
+  }
   if (!unit) {
     return (
       <div className="page">
@@ -299,6 +344,7 @@ export default function Repair({ params }: { params: URLSearchParams }) {
   return (
     <div className="page">
       <PageHead
+        eyebrow="Repair attempts"
         title="Repair attempts"
         lede={`Fixed start: attempt 0 is the recorded v0.4 reply, then up to ${
           recorded.runs.find((r) => r.milestone === 'v0.5')?.maxRepairAttempts ?? '?'

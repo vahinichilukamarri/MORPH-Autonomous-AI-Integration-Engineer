@@ -11,13 +11,17 @@ import type {
   Condition,
   DemoData,
   FeedbackItem,
+  Finding,
+  Guarantee,
   InputSet,
   OracleCategory,
   ProposedField,
   RepliesData,
   Reply,
+  RoadmapItem,
   RunInfo,
   Scenario,
+  SiteData,
   SourceFile,
   Unit,
   Usage,
@@ -33,7 +37,19 @@ export const SOURCES = {
   repairExpected: 'bench/replays/repair/fixed/expected.json',
   mappingReplay: 'bench/replays/crm_customer_to_support_user.expected.json',
   repairState: 'backend/app/repair/state.py',
+  readme: 'README.md',
 } as const
+
+/** Short landing-page titles for the README design-principles rows, each tied to the row that starts
+ * with `match`. A missing row fails the build rather than leaving a title without its claim. */
+const GUARANTEE_TITLES = [
+  { title: 'Models propose, code decides', match: 'A model is called only' },
+  { title: 'Review gate', match: 'Review gate' },
+  { title: 'Gates never loosen', match: 'Gates never loosen' },
+  { title: 'Sandbox containment', match: 'Generated code runs only in the sandbox' },
+  { title: 'Oracle isolation', match: 'The oracle never feeds repair' },
+  { title: 'Replayable runs', match: 'Every real model call is recorded' },
+] as const
 
 /** Naming used throughout the evaluation reports (docs/codegen-eval.md, docs/repair-eval.md). */
 const SCENARIO_LABELS: Record<string, string> = {
@@ -279,6 +295,59 @@ function review(reader: Reader): DemoData['review'] {
   return { scenario: 'crm_customer_to_support_user', mode, model: str(replay.model), fields }
 }
 
+/** The lines of a `## heading` section of a markdown file, up to the next `## `. */
+function section(markdown: string, heading: string): string[] {
+  const lines = markdown.split('\n')
+  const start = lines.indexOf(`## ${heading}`)
+  if (start < 0) throw new Error(`README: no "## ${heading}" section`)
+  const end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
+  return lines.slice(start + 1, end < 0 ? undefined : end)
+}
+
+/** Body rows of the first markdown table in `lines`, split into trimmed cells. */
+function tableRows(lines: string[]): string[][] {
+  return lines
+    .filter((l) => l.startsWith('|'))
+    .slice(2)
+    .map((l) =>
+      l
+        .slice(1, -1)
+        .split('|')
+        .map((c) => c.trim()),
+    )
+}
+
+function site(reader: Reader): SiteData {
+  const readme = reader.text(SOURCES.readme)
+  const repo = /\]\((https:\/\/github\.com\/[\w.-]+\/[\w.-]+)\/actions\//.exec(readme)
+  if (!repo) throw new Error('README: no repository URL in the CI badge')
+
+  const rows = tableRows(section(readme, 'Design principles enforced in code'))
+  const guarantees: Guarantee[] = GUARANTEE_TITLES.map(({ title, match }) => {
+    const row = rows.find((r) => r[0].startsWith(match))
+    if (!row) throw new Error(`README: no design-principles row starting "${match}"`)
+    const enforcedIn = [...row[1].matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)].map((m) => ({ label: m[1], path: m[2] }))
+    return { title, claim: row[0], enforcedIn }
+  })
+
+  const roadmap: RoadmapItem[] = tableRows(section(readme, 'Status')).map(([tag, scope, status]) => ({
+    tag,
+    scope,
+    status,
+    state: status.startsWith('Done') ? 'done' : status.startsWith('In progress') ? 'in_progress' : 'planned',
+  }))
+
+  const findings: Finding[] = section(readme, 'Honest findings')
+    .filter((l) => l.startsWith('- **'))
+    .map((l) => {
+      const m = /^- \*\*(.+?)\*\* (.+)$/.exec(l)
+      if (!m) throw new Error(`README: cannot read finding "${l}"`)
+      return { headline: m[1], detail: m[2] }
+    })
+
+  return { repoUrl: repo[1], guarantees, roadmap, findings }
+}
+
 function reply(text: string): Reply {
   const parsed = JSON.parse(text) as Json
   if (typeof parsed.source === 'string') {
@@ -299,6 +368,7 @@ export function buildDemoData(root: string): { demo: DemoData; replies: RepliesD
     scenarios: scenarios(reader, ids),
     units,
     review: review(reader),
+    site: site(reader),
   }
   demo.generatedFrom = [...reader.used]
 

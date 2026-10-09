@@ -40,7 +40,10 @@ const StageCard = memo(function StageCard({ data }: NodeProps<StageNode>) {
       <Handle type="target" position={Position.Top} id="t-in" />
       <div className="flow-node__title">{stage.title}</div>
       <div className="flow-node__sub">{stage.subtitle}</div>
-      <div className="flow-node__state">{stage.stateLabel}</div>
+      <div className="flow-node__state">
+        <span className="flow-node__dot" aria-hidden="true" />
+        {stage.stateLabel}
+      </div>
       <Handle type="source" position={Position.Right} id="r" />
       <Handle type="source" position={Position.Bottom} id="b" />
       <Handle type="source" position={Position.Top} id="t" />
@@ -66,7 +69,7 @@ export default function PipelineGraph({
   reducedMotion,
 }: {
   view: PipelineView
-  selected: StageId
+  selected: StageId | null
   onSelect: (id: StageId) => void
   theme: Theme
   reducedMotion: boolean
@@ -95,7 +98,7 @@ export default function PipelineGraph({
               ? 'var(--accent)'
               : f.kind === 'grade'
                 ? 'var(--text-muted)'
-                : 'var(--ok)'
+                : 'var(--path)'
         return {
           id: f.id,
           source: f.source,
@@ -103,7 +106,7 @@ export default function PipelineGraph({
           ...handles(f.source, f.target),
           type: 'smoothstep',
           animated: f.traversed && !reducedMotion && f.kind !== 'grade',
-          className: f.traversed ? 'flow-edge is-traversed' : 'flow-edge',
+          className: `flow-edge flow-edge--${f.kind}${f.traversed ? ' is-traversed' : ''}`,
           style: {
             stroke: colour,
             strokeWidth: f.traversed ? 2 : 1,

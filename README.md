@@ -129,7 +129,7 @@ Plans: [docs/plans/](docs/plans/). Per-milestone run and verify steps: [docs/mil
 
 ## UI (v0.7, in progress)
 
-A static demo runs entirely in the browser from data generated out of the committed results and replays (`frontend/scripts/build-demo-data.ts`); a test rebuilds that data and fails on any drift. No backend, key, Docker or database is needed:
+A landing page and a product workspace that run entirely in the browser from data generated out of the committed results, replays and this README (`frontend/scripts/build-demo-data.ts`). A test rebuilds that data and fails on any drift, so every number, status and roadmap entry shown is the one in the repository. No backend, key, Docker or database is needed:
 
 ```powershell
 cd frontend
@@ -137,12 +137,13 @@ npm ci
 npm run dev
 ```
 
-Screens: overview, pipeline (React Flow), repair attempts (Monaco diff), results, review gate, and policy and audit. The policy screen shows fixture data in the v0.6 plan's shapes, labelled FIXTURE, because the v0.6 endpoints do not exist yet. `npm run dev:live` uses the REST API where endpoints exist.
+`#/` is the landing page (how it works, the results with their caveats, guarantees, roadmap); `#/app` is the workspace: overview, pipeline graph (React Flow) with a stage drawer, repair attempts with Monaco diffs, per-unit results, the review gate, and policy and audit. A run selector switches between the v0.4 one-shot and v0.5 fixed-start runs; Ctrl/Cmd+K opens the command palette and `?` lists the shortcuts. The policy and audit views are marked Preview: they show illustrative data in the v0.6 plan's shapes until those endpoints are wired. `npm run dev:live` uses the REST API where endpoints exist. Deployment config for Vercel and GitHub Pages is in [frontend/deploy/](frontend/deploy/); nothing deploys automatically.
 
 | | |
 |---|---|
-| ![Overview](docs/img/ui-overview.png) | ![Results](docs/img/ui-results.png) |
-| ![Pipeline](docs/img/ui-pipeline.png) | ![Repair](docs/img/ui-repair.png) |
+| ![Landing page](docs/img/ui-landing.png) | ![Overview](docs/img/ui-overview.png) |
+| ![Pipeline with the stage drawer](docs/img/ui-pipeline-drawer.png) | ![Repair attempts](docs/img/ui-repair.png) |
+| ![Results](docs/img/ui-results.png) | ![Policy and audit, Preview](docs/img/ui-policy.png) |
 
 Screenshots are written by the Playwright smoke test (`MORPH_SCREENSHOTS=1 npm run e2e`); more in [docs/img/](docs/img/).
 

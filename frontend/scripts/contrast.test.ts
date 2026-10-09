@@ -41,9 +41,9 @@ export function ratio(a: Rgb, b: Rgb): number {
 
 const dark = block(':root')
 const themes = { dark, light: { ...dark, ...block(":root[data-theme='light']") } }
-const TEXT = ['text', 'text-muted', 'text-faint', 'accent', 'ok', 'fail', 'human', 'blocked', 'incorrect', 'skipped', 'fixture']
+const TEXT = ['text', 'text-muted', 'text-faint', 'accent', 'ok', 'fail', 'human', 'blocked', 'incorrect', 'skipped', 'preview', 'path']
 const SURFACES = ['bg', 'surface-1', 'surface-2', 'surface-3']
-const STATUS = ['ok', 'fail', 'human', 'blocked', 'incorrect', 'skipped', 'accent']
+const STATUS = ['ok', 'fail', 'human', 'blocked', 'incorrect', 'skipped', 'accent', 'preview']
 
 describe.each(Object.entries(themes))('%s theme', (_name, t) => {
   it.each(TEXT.flatMap((fg) => SURFACES.map((bg) => [fg, bg])))('%s on %s is at least 4.5:1', (fg, bg) => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { summarise } from '../data/derive'
 import { recorded } from '../data/recorded'
-import { Results } from './Results'
+import Results from './Results'
 
 describe('Results', () => {
   it('marks READY-but-incorrect units distinctly, never as a pass', () => {

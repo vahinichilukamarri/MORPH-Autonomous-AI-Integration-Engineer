@@ -3,7 +3,9 @@ import { useState } from 'react'
 import { policyApi } from '../api/policy'
 import type { ActivePolicy, Approval, AuditEvent, ChainVerification, Decision } from '../api/policyTypes'
 import { useAsync } from '../app/useAsync'
-import { Badge, EmptyState, ErrorState, FixtureBanner, PageHead, Panel, Skeleton } from '../components/ui'
+import { Tabs } from '../components/Tabs'
+import { useToast } from '../components/Toast'
+import { Badge, Card, EmptyState, ErrorState, PageHead, PreviewBanner, PreviewTag, Skeleton } from '../components/ui'
 import type { Tone } from '../data/derive'
 
 const DECISION_TONE: Record<Decision, Tone> = { ALLOW: 'ok', DENY: 'fail', NEEDS_APPROVAL: 'human' }
@@ -43,16 +45,24 @@ function ChainBadge({ v }: { v: ChainVerification }) {
   )
 }
 
-export function Policy() {
+export default function Policy() {
   const [state, reload] = useAsync(() => load(), [])
   const [busy, setBusy] = useState<string | null>(null)
   const [decideError, setDecideError] = useState<Error | null>(null)
+  const [tab, setTab] = useState<'log' | 'rules'>('log')
+  const notify = useToast()
 
   const decide = async (id: string, decision: 'APPROVED' | 'DENIED') => {
     setBusy(id)
     setDecideError(null)
     try {
-      await policyApi.decide(id, decision)
+      const approval = await policyApi.decide(id, decision)
+      notify(
+        <>
+          <code>{approval.id}</code> {decision === 'APPROVED' ? 'approved' : 'denied'} (preview data, this tab only)
+        </>,
+        decision === 'APPROVED' ? 'ok' : 'fail',
+      )
       reload()
     } catch (e) {
       setDecideError(e instanceof Error ? e : new Error(String(e)))
@@ -64,22 +74,23 @@ export function Policy() {
   return (
     <div className="page">
       <PageHead
+        eyebrow={<>Policy &amp; audit <PreviewTag /></>}
         title="Policy & audit"
-        lede="The v0.6 policy layer gates every MCP tool call: deterministic rules, a floor the policy file cannot override, an append-only hash-chained audit log, and human approvals bound to the request and the policy."
+        lede="The v0.6 policy layer, in progress, is designed to gate every MCP tool call: deterministic rules, a floor the policy file cannot override, an append-only hash-chained audit log, and human approvals bound to the request and the policy."
       />
       {policyApi.isFixture && (
-        <FixtureBanner>
-          v0.6 is in progress and its endpoints do not exist yet. Everything on this screen is illustrative fixture data
-          in the planned shapes, not a recorded run. The hash chain is computed in your browser over the fixture rows;
+        <PreviewBanner>
+          v0.6 is in progress and its endpoints are not wired to this UI yet. Everything on this screen is illustrative
+          data in the planned shapes, not a recorded run. The hash chain is computed in your browser over these rows;
           approving or denying changes only this tab.
-        </FixtureBanner>
+        </PreviewBanner>
       )}
       {state.kind === 'loading' && <Skeleton lines={8} label="Loading policy" />}
       {state.kind === 'error' && <ErrorState error={state.error} onRetry={reload} />}
       {state.kind === 'ok' && (
         <>
           <div className="two-col">
-            <Panel
+            <Card
               title="Active policy"
               labelledBy="active-policy"
               actions={<span className="mono small faint">{state.data.policy.version}</span>}
@@ -106,8 +117,8 @@ export function Policy() {
                   </li>
                 ))}
               </ul>
-            </Panel>
-            <Panel title="Approval queue" labelledBy="approvals">
+            </Card>
+            <Card title="Approval queue" labelledBy="approvals">
               {decideError && <ErrorState error={decideError} />}
               {state.data.approvals.length === 0 ? (
                 <EmptyState title="Nothing waiting" />
@@ -126,7 +137,7 @@ export function Policy() {
                         <div className="approval__actions">
                           <button
                             type="button"
-                            className="button"
+                            className="btn btn--secondary"
                             disabled={busy === a.id}
                             onClick={() => void decide(a.id, 'APPROVED')}
                           >
@@ -134,7 +145,7 @@ export function Policy() {
                           </button>
                           <button
                             type="button"
-                            className="button button--danger"
+                            className="btn btn--danger"
                             disabled={busy === a.id}
                             onClick={() => void decide(a.id, 'DENIED')}
                           >
@@ -146,42 +157,21 @@ export function Policy() {
                   ))}
                 </ul>
               )}
-            </Panel>
+            </Card>
           </div>
 
-          <Panel title="Rules" labelledBy="rules">
-            <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="rules">
-              <table className="table table--compact">
-                <thead>
-                  <tr>
-                    <th scope="col">Rule</th>
-                    <th scope="col">Tools</th>
-                    <th scope="col">Roles</th>
-                    <th scope="col">Environment</th>
-                    <th scope="col">Data class</th>
-                    <th scope="col">Outcome</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.data.policy.rules.map((r) => (
-                    <tr key={r.id}>
-                      <td className="mono">{r.id}</td>
-                      <td className="mono small">{r.tools.join(', ')}</td>
-                      <td className="small">{r.roles.join(', ')}</td>
-                      <td className="small">{r.environments.join(', ')}</td>
-                      <td className="small">{r.dataClasses.join(', ')}</td>
-                      <td>
-                        <Badge tone={OUTCOME_TONE[r.outcome] ?? 'skipped'}>{r.outcome}</Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-
-          <Panel title="Decision log" labelledBy="audit" actions={<ChainBadge v={state.data.verification} />}>
-            <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="audit">
+          <Card title="Decision log and rules" labelledBy="audit" actions={<ChainBadge v={state.data.verification} />}>
+            <Tabs
+              label="Policy views"
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { id: 'log', label: 'Decision log' },
+                { id: 'rules', label: 'Rules' },
+              ]}
+              panel={
+                tab === 'log' ? (
+                  <div className="table-scroll" >
               <table className="table table--compact audit">
                 <thead>
                   <tr>
@@ -211,7 +201,39 @@ export function Policy() {
                 </tbody>
               </table>
             </div>
-          </Panel>
+                ) : (
+                  <div className="table-scroll" >
+              <table className="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Rule</th>
+                    <th scope="col">Tools</th>
+                    <th scope="col">Roles</th>
+                    <th scope="col">Environment</th>
+                    <th scope="col">Data class</th>
+                    <th scope="col">Outcome</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.data.policy.rules.map((r) => (
+                    <tr key={r.id}>
+                      <td className="mono">{r.id}</td>
+                      <td className="mono small">{r.tools.join(', ')}</td>
+                      <td className="small">{r.roles.join(', ')}</td>
+                      <td className="small">{r.environments.join(', ')}</td>
+                      <td className="small">{r.dataClasses.join(', ')}</td>
+                      <td>
+                        <Badge tone={OUTCOME_TONE[r.outcome] ?? 'skipped'}>{r.outcome}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+                )
+              }
+            />
+          </Card>
         </>
       )}
     </div>

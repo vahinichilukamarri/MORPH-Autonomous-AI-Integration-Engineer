@@ -1,6 +1,6 @@
 /** Read-only views over the recorded units. Every figure the UI shows is computed here or read
  * directly from the generated data; nothing is hard-coded. */
-import type { Condition, DemoData, Unit, Usage } from './types'
+import type { Condition, DemoData, Milestone, Unit, Usage } from './types'
 
 export type Tone = 'ok' | 'fail' | 'human' | 'blocked' | 'incorrect' | 'skipped' | 'accent'
 
@@ -148,11 +148,21 @@ export function runsPerUnit(data: DemoData): number {
   return Math.max(...counts.values())
 }
 
-export function recordedLabel(data: DemoData): string {
-  const run = data.runs.find((r) => r.milestone === 'v0.5') ?? data.runs[0]
+/** The persistent badge text for a recorded run: provider, model, runs per unit and start mode. */
+export function recordedLabel(data: DemoData, milestone: Milestone = 'v0.5'): string {
+  const run = data.runs.find((r) => r.milestone === milestone) ?? data.runs[0]
   const provider = run.provider.charAt(0).toUpperCase() + run.provider.slice(1)
-  const start = run.startMode ? `, ${run.startMode}-start` : ''
-  return `Recorded run: ${provider} ${run.model}, N=${runsPerUnit(data)}${start}`
+  const mode = run.startMode ? `, ${run.startMode}-start` : ', one-shot'
+  return `Recorded run: ${provider} ${run.model}, N=${runsPerUnit(data)}${mode}`
+}
+
+export const RUN_NAME: Record<Milestone, string> = {
+  'v0.4': 'v0.4 codegen · one-shot',
+  'v0.5': 'v0.5 repair · fixed-start',
+}
+
+export function runUnits(data: DemoData, milestone: Milestone): Unit[] {
+  return data.units.filter((u) => u.milestone === milestone)
 }
 
 /** Calls whose provider total equals input + output, i.e. output already contains reasoning. */

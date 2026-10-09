@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { MODE } from '../api/mode'
 import { rest, type Mapping } from '../api/rest'
 import { useAsync } from '../app/useAsync'
-import { Badge, EmptyState, ErrorState, PageHead, Panel, Skeleton } from '../components/ui'
+import { Badge, EmptyState, ErrorState, PageHead, Card, Skeleton } from '../components/ui'
 import type { Tone } from '../data/derive'
 import { recorded } from '../data/recorded'
 
@@ -25,7 +25,7 @@ function LiveMappings() {
   const [draft, setDraft] = useState('')
   const [runId, setRunId] = useState<number | null>(null)
   return (
-    <Panel title="Live: a mapping run from the API" labelledBy="live-review">
+    <Card title="Live: a mapping run from the API" labelledBy="live-review">
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -36,7 +36,7 @@ function LiveMappings() {
       >
         <label htmlFor="run-id">Mapping run id</label>
         <input id="run-id" className="input" inputMode="numeric" value={draft} onChange={(e) => setDraft(e.target.value)} />
-        <button type="submit" className="button">
+        <button type="submit" className="btn btn--secondary">
           Load
         </button>
       </form>
@@ -45,7 +45,7 @@ function LiveMappings() {
       ) : (
         <LiveTable runId={runId} />
       )}
-    </Panel>
+    </Card>
   )
 }
 
@@ -84,7 +84,7 @@ function LiveTable({ runId }: { runId: number }) {
   )
 }
 
-export function Review() {
+export default function Review() {
   const data = recorded
   const blocked = data.units.filter((u) => u.inputSet === 'as_proposed' && u.condition === 'D')
   const s1Blocked = new Map(
@@ -98,6 +98,7 @@ export function Review() {
   return (
     <div className="page">
       <PageHead
+        eyebrow="Review gate"
         title="Review gate"
         lede={
           <>
@@ -131,7 +132,7 @@ export function Review() {
         </div>
       </div>
 
-      <Panel title="Recorded: the as-proposed inputs, per scenario" labelledBy="blocked-scenarios">
+      <Card title="Recorded: the as-proposed inputs, per scenario" labelledBy="blocked-scenarios">
         <ul className="blocked-list">
           {blocked.map((u) => {
             const s = data.scenarios.find((x) => x.id === u.scenario)
@@ -163,9 +164,9 @@ export function Review() {
           The same blocks apply to D, L1 and L2: the gate runs before codegen, so every condition stops here with zero
           model calls.
         </p>
-      </Panel>
+      </Card>
 
-      <Panel title={`Recorded: the ${scenario?.label ?? ''} proposals (${data.review.mode} replay)`} labelledBy="s1-proposals">
+      <Card title={`Recorded: the ${scenario?.label ?? ''} proposals (${data.review.mode} replay)`} labelledBy="s1-proposals">
         <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="s1-proposals">
           <table className="table table--compact">
             <thead>
@@ -201,7 +202,7 @@ export function Review() {
           A proposal can match the answer key and still be held for review: the gate acts on the pipeline&apos;s own
           confidence, never on the answer key, which only the bench grader reads.
         </p>
-      </Panel>
+      </Card>
 
       {MODE === 'live' && <LiveMappings />}
     </div>

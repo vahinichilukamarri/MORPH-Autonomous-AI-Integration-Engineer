@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { Policy } from './Policy'
+import Policy from './Policy'
 
-describe('Policy & audit (fixture)', () => {
-  it('labels the screen as fixture data and verifies the hash chain', async () => {
+describe('Policy & audit (preview data)', () => {
+  it('labels the screen as Preview and verifies the hash chain', async () => {
     render(<Policy />)
-    expect(screen.getByText('FIXTURE')).toBeTruthy()
+    expect(screen.getAllByText('Preview').length).toBeGreaterThan(0)
+    expect(screen.queryByText('FIXTURE')).toBeNull()
     expect(await screen.findByText(/Hash chain verified/)).toBeTruthy()
     expect(screen.getAllByText('DENY').length).toBeGreaterThan(0)
     expect(screen.getAllByText('NEEDS_APPROVAL').length).toBeGreaterThan(0)

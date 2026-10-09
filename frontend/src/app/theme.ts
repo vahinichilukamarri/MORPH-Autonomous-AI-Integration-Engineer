@@ -1,32 +1,29 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 
 export type Theme = 'dark' | 'light'
 
 const KEY = 'morph.theme'
 
-/** Dark by default. The choice is a per-viewer convenience; storage may be unavailable. */
-function stored(): Theme {
+/** Dark by default. index.html applies a saved choice before first paint; storage may be unavailable. */
+function apply(theme: Theme): void {
+  document.documentElement.dataset.theme = theme
+}
+
+export function getTheme(): Theme {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+}
+
+export function setTheme(theme: Theme): void {
+  apply(theme)
   try {
-    return window.localStorage.getItem(KEY) === 'light' ? 'light' : 'dark'
+    window.localStorage.setItem(KEY, theme)
   } catch {
-    return 'dark'
+    // Private windows and blocked storage: the theme still applies for this visit.
   }
 }
 
-export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(stored)
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    try {
-      window.localStorage.setItem(KEY, theme)
-    } catch {
-      // Private windows and blocked storage: the theme still applies for this visit.
-    }
-  }, [theme])
-
-  const toggle = useCallback(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), [])
-  return [theme, toggle]
+export function toggleTheme(): void {
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark')
 }
 
 function subscribeTheme(onChange: () => void): () => void {
@@ -35,11 +32,9 @@ function subscribeTheme(onChange: () => void): () => void {
   return () => observer.disconnect()
 }
 
-/** The applied theme, for components such as the graph and the editor that theme themselves. */
-export function useAppliedTheme(): Theme {
-  return useSyncExternalStore(subscribeTheme, () =>
-    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
-  )
+/** The applied theme; every component that reads it re-renders when it changes. */
+export function useTheme(): Theme {
+  return useSyncExternalStore(subscribeTheme, getTheme)
 }
 
 function subscribeMotion(onChange: () => void): () => void {
