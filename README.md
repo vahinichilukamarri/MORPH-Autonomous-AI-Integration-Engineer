@@ -122,10 +122,29 @@ Full reports: [docs/codegen-eval.md](docs/codegen-eval.md) and [docs/codegen-eva
 | v0.4-codegen | Generated integration in the Docker sandbox, static gate, hidden oracle, D/L1/L2 evaluation | Done (tagged) |
 | v0.5-repair | Bounded LangGraph repair loop, guards, fixed-start evaluation | Done for the fixed-start run (sub-milestones tagged `v0.5-m2`, `v0.5-m3`); the fresh-start phase is planned and needs its own approval |
 | v0.6-mcp-policy | Capabilities as MCP tools, a policy layer gating every tool call | In progress: M0 (MCP SDK spike and import-isolation tests) done; policy core, audit, MCP gateway and evaluation planned |
-| v0.7-ui | Workspace: canvas, activity stream, mapping, code, test lab, repair view | Planned (the frontend currently shows backend health only) |
+| v0.7-ui | Workspace: canvas, activity stream, mapping, code, test lab, repair view | In progress on branch `ui/v0.7`: demo mode, six screens, tests; policy screen uses fixtures until v0.6 |
 | v0.8-bench | MORPH-Bench: 25 to 30 scenarios, metrics from real runs, report | Planned |
 
 Plans: [docs/plans/](docs/plans/). Per-milestone run and verify steps: [docs/milestones.md](docs/milestones.md).
+
+## UI (v0.7, in progress)
+
+A static demo runs entirely in the browser from data generated out of the committed results and replays (`frontend/scripts/build-demo-data.ts`); a test rebuilds that data and fails on any drift. No backend, key, Docker or database is needed:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Screens: overview, pipeline (React Flow), repair attempts (Monaco diff), results, review gate, and policy and audit. The policy screen shows fixture data in the v0.6 plan's shapes, labelled FIXTURE, because the v0.6 endpoints do not exist yet. `npm run dev:live` uses the REST API where endpoints exist.
+
+| | |
+|---|---|
+| ![Overview](docs/img/ui-overview.png) | ![Results](docs/img/ui-results.png) |
+| ![Pipeline](docs/img/ui-pipeline.png) | ![Repair](docs/img/ui-repair.png) |
+
+Screenshots are written by the Playwright smoke test (`MORPH_SCREENSHOTS=1 npm run e2e`); more in [docs/img/](docs/img/).
 
 ## Quickstart (PowerShell, from the repo root)
 
@@ -161,7 +180,7 @@ Real-model runs need `GROQ_API_KEY` in a git-ignored `.env`; the codegen and rep
 | [mock_systems/](mock_systems/) | Mock CRM and Support APIs with OpenAPI contracts, sample data and deterministic fault injection |
 | [sandbox/](sandbox/) | Sandbox image, gate configuration and the trusted runtime library generated code runs on |
 | [bench/](bench/) | Scenarios, answer keys, oracle, evaluation scripts, committed results and replays |
-| [frontend/](frontend/) | React + TypeScript + Vite app (health page only so far) |
+| [frontend/](frontend/) | React + TypeScript + Vite UI: static demo of the recorded runs, live mode over the REST API |
 | [docs/](docs/) | Design notes, evaluation reports and findings, milestone plans and reports |
 | [scripts/](scripts/) | `dev.ps1` developer commands |
 

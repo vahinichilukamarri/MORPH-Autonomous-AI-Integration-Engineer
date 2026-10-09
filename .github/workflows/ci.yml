@@ -110,6 +110,15 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      # Component tests, WCAG contrast of the colour tokens, the secret scan, and the drift test that
+      # rebuilds the demo data from the committed results and replays and compares it.
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:bundle
+      - run: npm run check:secrets
+      - run: npx playwright install --with-deps chromium
+      # Demo-mode smoke test against the static build: every screen, no console error.
+      - run: npm run e2e
 
   runtime:
     runs-on: ubuntu-latest

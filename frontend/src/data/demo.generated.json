@@ -1,0 +1,1654 @@
+{
+  "generatedFrom": [
+    {
+      "path": "bench/results/codegen-v0.4/results.jsonl",
+      "sha256": "6f5854d5c4b094190a7dbef33b5b32ab38ee1015e3f171b48aba345174a115ce"
+    },
+    {
+      "path": "bench/replays/repair/fixed/expected.json",
+      "sha256": "2c8d260bf62673154c8b405ec5854b9ac50501a1ea5c4903612f24a841712d4b"
+    },
+    {
+      "path": "bench/results/repair-v0.5/fixed/results.jsonl",
+      "sha256": "d0f139e590f2430db35f04405826ebd06b2168e85c0e5fc4d79ea983fcf6e122"
+    },
+    {
+      "path": "bench/results/codegen-v0.4/provenance.json",
+      "sha256": "90cb9364bd442a919a3b9904661884cc7ee44d8211099d40fc1659c4da70053e"
+    },
+    {
+      "path": "bench/results/repair-v0.5/fixed/provenance.json",
+      "sha256": "f540a3c84c2ad8ad594053a794c3dd09cbaa7112a4b0ff04c1d1bf583da81262"
+    },
+    {
+      "path": "backend/app/repair/state.py",
+      "sha256": "5d04806db328c3c4ef96af471836fd2b8abdfdb7b47982a3c35a47fc947fedc0"
+    },
+    {
+      "path": "bench/scenarios/crm_customer_to_support_user/scenario.yaml",
+      "sha256": "65a722b1b0d8667d476cafab3bab1763a3ef040f2c0dc0a71187f308d7c23568"
+    },
+    {
+      "path": "bench/scenarios/support_user_to_crm_customer/scenario.yaml",
+      "sha256": "d306a07e46e117685a394522d02d00fb93516f2df764f2acd4bb45cba88c50cb"
+    },
+    {
+      "path": "bench/scenarios/crm_v2_to_support_v2/scenario.yaml",
+      "sha256": "d289d152a5ba129077f3f442ab9a85fb2ddd2bee98c29af1ccbd680245dd46bc"
+    },
+    {
+      "path": "bench/replays/crm_customer_to_support_user.expected.json",
+      "sha256": "92a4cf2485df42155d0d8a35a6aa35c5d1c59efc759e81f60ad6cfadb30a64b2"
+    }
+  ],
+  "runs": [
+    {
+      "milestone": "v0.4",
+      "runDate": "2026-10-07",
+      "model": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "settings": "low reasoning effort, temperature 0, at most 4000 output tokens",
+      "harnessSha": "fcd86ff",
+      "postRunEdits": 1,
+      "maxRepairAttempts": null,
+      "startMode": null
+    },
+    {
+      "milestone": "v0.5",
+      "runDate": "2026-10-08",
+      "model": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "settings": "low reasoning effort, temperature 0, at most 4000 output tokens",
+      "harnessSha": "d80d9f0",
+      "postRunEdits": 0,
+      "maxRepairAttempts": 3,
+      "startMode": "fixed"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "crm_customer_to_support_user",
+      "label": "S1",
+      "source": "crm.Customer",
+      "target": "support.User",
+      "description": "Copy CRM customers into the Support desk as users. The two systems differ in id format, name structure, enum vocabulary, phone format, timestamp type and segment/tier semantics."
+    },
+    {
+      "id": "support_user_to_crm_customer",
+      "label": "S3",
+      "source": "support.User",
+      "target": "crm.Customer",
+      "description": "The reverse direction: create CRM customers from Support desk users. Several fields are genuinely hard here: the id must come from externalRef (and cannot be invented for users that were never imported), the joined name has to be split, the phone gets its \"+\" back, the epoch becomes an ISO string, and the CRM segment cannot be recovered from the support tier."
+    },
+    {
+      "id": "crm_v2_to_support_v2",
+      "label": "S4",
+      "source": "crm.Customer",
+      "target": "support.User",
+      "description": "The first integration again, against the drifted v2 contracts: the CRM renamed phone to phone_number and Support renamed tier to serviceTier. Everything else is unchanged, so a mapping tied to the old names must be re-derived."
+    }
+  ],
+  "units": [
+    {
+      "key": "crm_customer_to_support_user:D:approved",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "D",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "READY",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": true,
+        "ruff": true,
+        "mypy": true
+      },
+      "gateFindings": [],
+      "generatedTests": {
+        "passed": 13,
+        "total": 13
+      },
+      "oracle": [
+        {
+          "id": "O1",
+          "passed": 18,
+          "total": 18
+        },
+        {
+          "id": "O2",
+          "passed": 19,
+          "total": 19
+        },
+        {
+          "id": "O3",
+          "passed": 11,
+          "total": 11
+        },
+        {
+          "id": "O4",
+          "passed": 20,
+          "total": 20
+        },
+        {
+          "id": "O5",
+          "passed": 29,
+          "total": 29
+        },
+        {
+          "id": "O6",
+          "passed": 37,
+          "total": 37
+        },
+        {
+          "id": "O7",
+          "passed": 5,
+          "total": 5
+        }
+      ],
+      "oracleFailedChecks": [],
+      "integrationCorrect": true,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_customer_to_support_user:D:as_proposed",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "D",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "accountState: NEEDS_REVIEW",
+        "tier: NEEDS_REVIEW"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_v2_to_support_v2:D:approved",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "D",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "READY",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": true,
+        "ruff": true,
+        "mypy": true
+      },
+      "gateFindings": [],
+      "generatedTests": {
+        "passed": 13,
+        "total": 13
+      },
+      "oracle": [
+        {
+          "id": "O1",
+          "passed": 18,
+          "total": 18
+        },
+        {
+          "id": "O2",
+          "passed": 19,
+          "total": 19
+        },
+        {
+          "id": "O3",
+          "passed": 11,
+          "total": 11
+        },
+        {
+          "id": "O4",
+          "passed": 20,
+          "total": 20
+        },
+        {
+          "id": "O5",
+          "passed": 29,
+          "total": 29
+        },
+        {
+          "id": "O6",
+          "passed": 37,
+          "total": 37
+        },
+        {
+          "id": "O7",
+          "passed": 5,
+          "total": 5
+        }
+      ],
+      "oracleFailedChecks": [],
+      "integrationCorrect": true,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_v2_to_support_v2:D:as_proposed",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "D",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "accountState: NEEDS_REVIEW",
+        "serviceTier: NEEDS_REVIEW"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "support_user_to_crm_customer:D:approved",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "D",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "READY",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": true,
+        "ruff": true,
+        "mypy": true
+      },
+      "gateFindings": [],
+      "generatedTests": {
+        "passed": 16,
+        "total": 16
+      },
+      "oracle": [
+        {
+          "id": "O1",
+          "passed": 17,
+          "total": 17
+        },
+        {
+          "id": "O2",
+          "passed": 19,
+          "total": 19
+        },
+        {
+          "id": "O3",
+          "passed": 11,
+          "total": 11
+        },
+        {
+          "id": "O4",
+          "passed": 9,
+          "total": 9
+        },
+        {
+          "id": "O5",
+          "passed": 29,
+          "total": 29
+        },
+        {
+          "id": "O6",
+          "passed": 33,
+          "total": 33
+        },
+        {
+          "id": "O7",
+          "passed": 5,
+          "total": 5
+        }
+      ],
+      "oracleFailedChecks": [],
+      "integrationCorrect": true,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "support_user_to_crm_customer:D:as_proposed",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "D",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "segment: UNRESOLVED"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_customer_to_support_user:L1:approved",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "L1",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "LLM_INVALID",
+      "reason": null,
+      "blockedReasons": [
+        "model output invalid: omit_if_null_fields: 'externalRef' is not optional and non-nullable; omit_if_null_fields: 'phoneNumb"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": {
+        "calls": 2,
+        "input": 8781,
+        "output": 2092,
+        "reasoning": 674,
+        "total": null,
+        "latencyMs": 5717
+      },
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_customer_to_support_user:L2:approved",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "L2",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "GATE_FAILED",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": false
+      },
+      "gateFindings": [
+        "ast: SUPPRESSION lint and type suppression comments",
+        "ast: DUNDER_ACCESS attribute '__cause__'"
+      ],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": {
+        "calls": 1,
+        "input": 4002,
+        "output": 1859,
+        "reasoning": 382,
+        "total": null,
+        "latencyMs": 9375
+      },
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_customer_to_support_user:L1:as_proposed",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "L1",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "accountState: NEEDS_REVIEW",
+        "tier: NEEDS_REVIEW"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_customer_to_support_user:L2:as_proposed",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "L2",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "accountState: NEEDS_REVIEW",
+        "tier: NEEDS_REVIEW"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_v2_to_support_v2:L1:approved",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "L1",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "LLM_INVALID",
+      "reason": null,
+      "blockedReasons": [
+        "model output invalid: target: there is no PATCH by id at '/users/{userId}'; omit_if_null_fields: 'externalRef' is not opti"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": {
+        "calls": 2,
+        "input": 8792,
+        "output": 2071,
+        "reasoning": 665,
+        "total": null,
+        "latencyMs": 5983
+      },
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_v2_to_support_v2:L2:approved",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "L2",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "GATE_FAILED",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": false
+      },
+      "gateFindings": [
+        "ast: SYNTAX unmatched '}' (integration/sync.py, line 177)"
+      ],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": {
+        "calls": 1,
+        "input": 4008,
+        "output": 1773,
+        "reasoning": 265,
+        "total": null,
+        "latencyMs": 4672
+      },
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_v2_to_support_v2:L1:as_proposed",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "L1",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "accountState: NEEDS_REVIEW",
+        "serviceTier: NEEDS_REVIEW"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_v2_to_support_v2:L2:as_proposed",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "L2",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "accountState: NEEDS_REVIEW",
+        "serviceTier: NEEDS_REVIEW"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "support_user_to_crm_customer:L1:approved",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "L1",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "GATE_FAILED",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": false
+      },
+      "gateFindings": [
+        "ast: SECRET_LITERAL string looks like a secret or token",
+        "ast: SECRET_LITERAL string looks like a secret or token"
+      ],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": {
+        "calls": 2,
+        "input": 8690,
+        "output": 1964,
+        "reasoning": 600,
+        "total": null,
+        "latencyMs": 5733
+      },
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "support_user_to_crm_customer:L2:approved",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "L2",
+      "inputSet": "approved",
+      "milestone": "v0.4",
+      "status": "GATE_FAILED",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {
+        "ast": false
+      },
+      "gateFindings": [
+        "ast: SYNTAX unmatched '}' (integration/sync.py, line 145)"
+      ],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": {
+        "calls": 1,
+        "input": 3951,
+        "output": 1526,
+        "reasoning": 168,
+        "total": null,
+        "latencyMs": 5375
+      },
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "support_user_to_crm_customer:L1:as_proposed",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "L1",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "segment: UNRESOLVED"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "support_user_to_crm_customer:L2:as_proposed",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "L2",
+      "inputSet": "as_proposed",
+      "milestone": "v0.4",
+      "status": "BLOCKED_PENDING_REVIEW",
+      "reason": null,
+      "blockedReasons": [
+        "segment: UNRESOLVED"
+      ],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": null,
+      "usage": null,
+      "seededUsage": null,
+      "attempts": []
+    },
+    {
+      "key": "crm_customer_to_support_user:L1R:approved",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "L1R",
+      "inputSet": "approved",
+      "milestone": "v0.5",
+      "status": "READY",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": [
+        {
+          "id": "O1",
+          "passed": 18,
+          "total": 18
+        },
+        {
+          "id": "O2",
+          "passed": 19,
+          "total": 19
+        },
+        {
+          "id": "O3",
+          "passed": 11,
+          "total": 11
+        },
+        {
+          "id": "O4",
+          "passed": 20,
+          "total": 20
+        },
+        {
+          "id": "O5",
+          "passed": 29,
+          "total": 29
+        },
+        {
+          "id": "O6",
+          "passed": 37,
+          "total": 37
+        },
+        {
+          "id": "O7",
+          "passed": 5,
+          "total": 5
+        }
+      ],
+      "oracleFailedChecks": [],
+      "integrationCorrect": true,
+      "exposure": "PROMPT_GAP",
+      "usage": {
+        "calls": 3,
+        "input": 15709,
+        "output": 2792,
+        "reasoning": 733,
+        "total": 18501,
+        "latencyMs": 8734
+      },
+      "seededUsage": {
+        "calls": 1,
+        "input": 4080,
+        "output": 1112,
+        "reasoning": 455,
+        "total": null,
+        "latencyMs": 2827
+      },
+      "attempts": [
+        {
+          "n": 0,
+          "source": "replay",
+          "failedStage": "PROPOSAL",
+          "feedback": [
+            {
+              "stage": "PROPOSAL",
+              "code": "UPSERT"
+            },
+            {
+              "stage": "PROPOSAL",
+              "code": "omit_if_null_fields"
+            },
+            {
+              "stage": "PROPOSAL",
+              "code": "omit_if_null_fields"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": null,
+          "usage": {
+            "calls": 1,
+            "input": 4080,
+            "output": 1112,
+            "reasoning": 455,
+            "total": null,
+            "latencyMs": 2827
+          },
+          "replyId": "b6767473ab5c0e54ac44b74cfb12b12a51a98ddba873ca5b7eab1e0e6afa9a30"
+        },
+        {
+          "n": 1,
+          "source": "network",
+          "failedStage": "GUARD",
+          "feedback": [
+            {
+              "stage": "GUARD",
+              "code": "G5"
+            },
+            {
+              "stage": "GUARD",
+              "code": "G5"
+            },
+            {
+              "stage": "GUARD",
+              "code": "G5"
+            }
+          ],
+          "guardEnforced": [
+            "G5",
+            "G5",
+            "G5"
+          ],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5149,
+            "output": 1064,
+            "reasoning": 377,
+            "total": 6213,
+            "latencyMs": 2921
+          },
+          "replyId": "9b61598057c86ced987ac5d2208604e550843a44f5688a3f94be1df4e0909b4e"
+        },
+        {
+          "n": 2,
+          "source": "network",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "SECRET_LITERAL"
+            },
+            {
+              "stage": "AST",
+              "code": "SECRET_LITERAL"
+            },
+            {
+              "stage": "AST",
+              "code": "SECRET_LITERAL"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5198,
+            "output": 851,
+            "reasoning": 162,
+            "total": 6049,
+            "latencyMs": 3094
+          },
+          "replyId": "d5e2f4c4b4d6e3fe49de68cb82f0740e3b997c3059f44cca59fa6556d75913b5"
+        },
+        {
+          "n": 3,
+          "source": "network",
+          "failedStage": null,
+          "feedback": [],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5362,
+            "output": 877,
+            "reasoning": 194,
+            "total": 6239,
+            "latencyMs": 2719
+          },
+          "replyId": "2e5f1e2f6e83d670a46970d3dcceb15dea00a54aa8d33c550c0bf0bab80f7a15"
+        }
+      ]
+    },
+    {
+      "key": "crm_customer_to_support_user:L2R:approved",
+      "scenario": "crm_customer_to_support_user",
+      "condition": "L2R",
+      "inputSet": "approved",
+      "milestone": "v0.5",
+      "status": "HUMAN_REVIEW_REQUIRED",
+      "reason": "EXHAUSTED:GUARD",
+      "blockedReasons": [],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": "CAUSE_CONTRADICTION",
+      "usage": {
+        "calls": 3,
+        "input": 16870,
+        "output": 4423,
+        "reasoning": 410,
+        "total": 21293,
+        "latencyMs": 14999
+      },
+      "seededUsage": {
+        "calls": 1,
+        "input": 4002,
+        "output": 1859,
+        "reasoning": 382,
+        "total": null,
+        "latencyMs": 9375
+      },
+      "attempts": [
+        {
+          "n": 0,
+          "source": "replay",
+          "failedStage": "GUARD",
+          "feedback": [
+            {
+              "stage": "GUARD",
+              "code": "G3"
+            }
+          ],
+          "guardEnforced": [
+            "G3"
+          ],
+          "guardShadow": [],
+          "finishReason": null,
+          "usage": {
+            "calls": 1,
+            "input": 4002,
+            "output": 1859,
+            "reasoning": 382,
+            "total": null,
+            "latencyMs": 9375
+          },
+          "replyId": "daf86d58e2982d721dcd31afe069a94fefa2545a70a918c43af3519b44c64307"
+        },
+        {
+          "n": 1,
+          "source": "network",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "DUNDER_ACCESS"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5625,
+            "output": 1444,
+            "reasoning": 85,
+            "total": 7069,
+            "latencyMs": 4172
+          },
+          "replyId": "42438eb8587994d8f10499714ec5ce4de2f3c28a747e7cb7125a32de45ce9bec"
+        },
+        {
+          "n": 2,
+          "source": "network",
+          "failedStage": "RUFF",
+          "feedback": [
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP035"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP035"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP006"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP006"
+            },
+            {
+              "stage": "MYPY",
+              "code": "TYPE_ERROR"
+            },
+            {
+              "stage": "MYPY",
+              "code": "TYPE_ERROR"
+            },
+            {
+              "stage": "MYPY",
+              "code": "TYPE_ERROR"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5520,
+            "output": 1591,
+            "reasoning": 242,
+            "total": 7111,
+            "latencyMs": 6452
+          },
+          "replyId": "d1efc85e6e8d9e175d0073ac7f8369738454ac1aaebe4fb41ca1d553a40f19ef"
+        },
+        {
+          "n": 3,
+          "source": "network",
+          "failedStage": "GUARD",
+          "feedback": [
+            {
+              "stage": "GUARD",
+              "code": "G4"
+            }
+          ],
+          "guardEnforced": [
+            "G4"
+          ],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5725,
+            "output": 1388,
+            "reasoning": 83,
+            "total": 7113,
+            "latencyMs": 4375
+          },
+          "replyId": "371e18a519d33c2f62b34f878f48bac00db23cf1f7ef3aa356418da8a034af68"
+        }
+      ]
+    },
+    {
+      "key": "support_user_to_crm_customer:L1R:approved",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "L1R",
+      "inputSet": "approved",
+      "milestone": "v0.5",
+      "status": "READY",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": [
+        {
+          "id": "O1",
+          "passed": 13,
+          "total": 17
+        },
+        {
+          "id": "O2",
+          "passed": 18,
+          "total": 19
+        },
+        {
+          "id": "O3",
+          "passed": 11,
+          "total": 11
+        },
+        {
+          "id": "O4",
+          "passed": 8,
+          "total": 9
+        },
+        {
+          "id": "O5",
+          "passed": 24,
+          "total": 29
+        },
+        {
+          "id": "O6",
+          "passed": 31,
+          "total": 33
+        },
+        {
+          "id": "O7",
+          "passed": 4,
+          "total": 5
+        }
+      ],
+      "oracleFailedChecks": [
+        "O1.imported-user-updates-its-customer:values",
+        "O1.first-space-split-and-disabled:values",
+        "O1.blocked-becomes-suspended:values",
+        "O1.no_missing_extra_or_wrong_target_records",
+        "O4.n=101:target_holds_exactly_the_expected_records",
+        "O5.http_500_on_target:converges_to_the_expected_state_without_duplicates",
+        "O5.http_500_on_source:converges_to_the_expected_state_without_duplicates",
+        "O5.http_429_on_target:converges_to_the_expected_state_without_duplicates",
+        "O5.malformed_json_on_target:converges_to_the_expected_state_without_duplicates",
+        "O5.latency:state_is_correct",
+        "O7.unrelated_source_drift:no_false_alarm",
+        "O6.unknown_enum:target_state_is_exactly_the_expected_one",
+        "O6.bad_created_at:target_state_is_exactly_the_expected_one",
+        "O2.target_state_is_exactly_the_expected_one"
+      ],
+      "integrationCorrect": false,
+      "exposure": "SECRET_LITERAL_FALSE_POSITIVE",
+      "usage": {
+        "calls": 2,
+        "input": 10446,
+        "output": 1859,
+        "reasoning": 515,
+        "total": 12305,
+        "latencyMs": 6125
+      },
+      "seededUsage": {
+        "calls": 1,
+        "input": 4029,
+        "output": 1175,
+        "reasoning": 385,
+        "total": null,
+        "latencyMs": 3327
+      },
+      "attempts": [
+        {
+          "n": 0,
+          "source": "replay",
+          "failedStage": "PROPOSAL",
+          "feedback": [
+            {
+              "stage": "PROPOSAL",
+              "code": "omit_if_null_fields"
+            },
+            {
+              "stage": "PROPOSAL",
+              "code": "omit_if_null_fields"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": null,
+          "usage": {
+            "calls": 1,
+            "input": 4029,
+            "output": 1175,
+            "reasoning": 385,
+            "total": null,
+            "latencyMs": 3327
+          },
+          "replyId": "caa90ad052a04664316dd5f88c2991b6de37868f21fe69aa097ad8bb0214db8a"
+        },
+        {
+          "n": 1,
+          "source": "network",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "SECRET_LITERAL"
+            },
+            {
+              "stage": "AST",
+              "code": "SECRET_LITERAL"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5225,
+            "output": 883,
+            "reasoning": 205,
+            "total": 6108,
+            "latencyMs": 3297
+          },
+          "replyId": "557a3d940b9b46db07229f925f8a82e4e824c5193de2ceaf3c198339d03db731"
+        },
+        {
+          "n": 2,
+          "source": "network",
+          "failedStage": null,
+          "feedback": [],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5221,
+            "output": 976,
+            "reasoning": 310,
+            "total": 6197,
+            "latencyMs": 2828
+          },
+          "replyId": "6aafecffd35c790a8846eb49ea231893f94cc5c4eeb4482307cb3ee2f33b3945"
+        }
+      ]
+    },
+    {
+      "key": "support_user_to_crm_customer:L2R:approved",
+      "scenario": "support_user_to_crm_customer",
+      "condition": "L2R",
+      "inputSet": "approved",
+      "milestone": "v0.5",
+      "status": "HUMAN_REVIEW_REQUIRED",
+      "reason": "EXHAUSTED:RUFF",
+      "blockedReasons": [],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": "MODEL",
+      "usage": {
+        "calls": 3,
+        "input": 16308,
+        "output": 4065,
+        "reasoning": 371,
+        "total": 20373,
+        "latencyMs": 12015
+      },
+      "seededUsage": {
+        "calls": 1,
+        "input": 3951,
+        "output": 1526,
+        "reasoning": 168,
+        "total": null,
+        "latencyMs": 5375
+      },
+      "attempts": [
+        {
+          "n": 0,
+          "source": "replay",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "SYNTAX"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": null,
+          "usage": {
+            "calls": 1,
+            "input": 3951,
+            "output": 1526,
+            "reasoning": 168,
+            "total": null,
+            "latencyMs": 5375
+          },
+          "replyId": "42bba7e88d538b465798d1538c6140dccd951a333fd83fe9ebbcb90677260141"
+        },
+        {
+          "n": 1,
+          "source": "network",
+          "failedStage": "GUARD",
+          "feedback": [
+            {
+              "stage": "GUARD",
+              "code": "G3"
+            }
+          ],
+          "guardEnforced": [
+            "G3"
+          ],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5504,
+            "output": 1321,
+            "reasoning": 75,
+            "total": 6825,
+            "latencyMs": 3594
+          },
+          "replyId": "0e18d0133b4e06536aabf1c438253a7c5abba3541db398ab2fd7b48908abe986"
+        },
+        {
+          "n": 2,
+          "source": "network",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "DUNDER_ACCESS"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5402,
+            "output": 1374,
+            "reasoning": 134,
+            "total": 6776,
+            "latencyMs": 3781
+          },
+          "replyId": "1e212b2cd04f1234827e248106d42b0552ec982c61cf109b59baa3c214e86798"
+        },
+        {
+          "n": 3,
+          "source": "network",
+          "failedStage": "RUFF",
+          "feedback": [
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP035"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP035"
+            },
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP006"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5402,
+            "output": 1370,
+            "reasoning": 162,
+            "total": 6772,
+            "latencyMs": 4640
+          },
+          "replyId": "052d025fa0046b4cc6db2b59c4f32816b4c2a4092eb98fca2177a940eeae7bf0"
+        }
+      ]
+    },
+    {
+      "key": "crm_v2_to_support_v2:L1R:approved",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "L1R",
+      "inputSet": "approved",
+      "milestone": "v0.5",
+      "status": "READY",
+      "reason": null,
+      "blockedReasons": [],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": [
+        {
+          "id": "O1",
+          "passed": 18,
+          "total": 18
+        },
+        {
+          "id": "O2",
+          "passed": 19,
+          "total": 19
+        },
+        {
+          "id": "O3",
+          "passed": 11,
+          "total": 11
+        },
+        {
+          "id": "O4",
+          "passed": 20,
+          "total": 20
+        },
+        {
+          "id": "O5",
+          "passed": 29,
+          "total": 29
+        },
+        {
+          "id": "O6",
+          "passed": 37,
+          "total": 37
+        },
+        {
+          "id": "O7",
+          "passed": 5,
+          "total": 5
+        }
+      ],
+      "oracleFailedChecks": [],
+      "integrationCorrect": true,
+      "exposure": "PROMPT_GAP",
+      "usage": {
+        "calls": 1,
+        "input": 5225,
+        "output": 1239,
+        "reasoning": 485,
+        "total": 6464,
+        "latencyMs": 4859
+      },
+      "seededUsage": {
+        "calls": 1,
+        "input": 4086,
+        "output": 1147,
+        "reasoning": 424,
+        "total": null,
+        "latencyMs": 3265
+      },
+      "attempts": [
+        {
+          "n": 0,
+          "source": "replay",
+          "failedStage": "PROPOSAL",
+          "feedback": [
+            {
+              "stage": "PROPOSAL",
+              "code": "UPSERT"
+            },
+            {
+              "stage": "PROPOSAL",
+              "code": "omit_if_null_fields"
+            },
+            {
+              "stage": "PROPOSAL",
+              "code": "omit_if_null_fields"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": null,
+          "usage": {
+            "calls": 1,
+            "input": 4086,
+            "output": 1147,
+            "reasoning": 424,
+            "total": null,
+            "latencyMs": 3265
+          },
+          "replyId": "9505e4c9fa84e4a7d19a45dc07b147f8024f8d873aa500d740259bb1838cf1cd"
+        },
+        {
+          "n": 1,
+          "source": "network",
+          "failedStage": null,
+          "feedback": [],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5225,
+            "output": 1239,
+            "reasoning": 485,
+            "total": 6464,
+            "latencyMs": 4859
+          },
+          "replyId": "2e3e65b1c63e177bb615c998c2b3b70ccf58bb69cb49346b152b72f7c0ed833a"
+        }
+      ]
+    },
+    {
+      "key": "crm_v2_to_support_v2:L2R:approved",
+      "scenario": "crm_v2_to_support_v2",
+      "condition": "L2R",
+      "inputSet": "approved",
+      "milestone": "v0.5",
+      "status": "HUMAN_REVIEW_REQUIRED",
+      "reason": "EXHAUSTED:RUFF",
+      "blockedReasons": [],
+      "gate": {},
+      "gateFindings": [],
+      "generatedTests": null,
+      "oracle": null,
+      "oracleFailedChecks": [],
+      "integrationCorrect": null,
+      "exposure": "MODEL",
+      "usage": {
+        "calls": 3,
+        "input": 16646,
+        "output": 4321,
+        "reasoning": 456,
+        "total": 20967,
+        "latencyMs": 13734
+      },
+      "seededUsage": {
+        "calls": 1,
+        "input": 4008,
+        "output": 1773,
+        "reasoning": 265,
+        "total": null,
+        "latencyMs": 4672
+      },
+      "attempts": [
+        {
+          "n": 0,
+          "source": "replay",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "SYNTAX"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": null,
+          "usage": {
+            "calls": 1,
+            "input": 4008,
+            "output": 1773,
+            "reasoning": 265,
+            "total": null,
+            "latencyMs": 4672
+          },
+          "replyId": "fbde26edd6b4e82440f16fc85844c0b6b66397b2c9f0ab061518d8eb373932e7"
+        },
+        {
+          "n": 1,
+          "source": "network",
+          "failedStage": "GUARD",
+          "feedback": [
+            {
+              "stage": "GUARD",
+              "code": "G3"
+            }
+          ],
+          "guardEnforced": [
+            "G3"
+          ],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5633,
+            "output": 1403,
+            "reasoning": 34,
+            "total": 7036,
+            "latencyMs": 3875
+          },
+          "replyId": "42080fa584dc4eea49beac1b2f123b478d224e4c5f1430f67193c7f93054644e"
+        },
+        {
+          "n": 2,
+          "source": "network",
+          "failedStage": "AST",
+          "feedback": [
+            {
+              "stage": "AST",
+              "code": "DUNDER_ACCESS"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5520,
+            "output": 1463,
+            "reasoning": 129,
+            "total": 6983,
+            "latencyMs": 5953
+          },
+          "replyId": "41371b3f8dc3ba927a126b513c5d17f96858399edf7c58393eb807055566decb"
+        },
+        {
+          "n": 3,
+          "source": "network",
+          "failedStage": "RUFF",
+          "feedback": [
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP035"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP035"
+            },
+            {
+              "stage": "RUFF",
+              "code": "F401"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP006"
+            },
+            {
+              "stage": "RUFF",
+              "code": "UP006"
+            },
+            {
+              "stage": "MYPY",
+              "code": "TYPE_ERROR"
+            }
+          ],
+          "guardEnforced": [],
+          "guardShadow": [],
+          "finishReason": "stop",
+          "usage": {
+            "calls": 1,
+            "input": 5493,
+            "output": 1455,
+            "reasoning": 293,
+            "total": 6948,
+            "latencyMs": 3906
+          },
+          "replyId": "ff5c8ee475d0898dfd682643d73b739a73f1c787b15bb4ad2b926c98a2345cc5"
+        }
+      ]
+    }
+  ],
+  "review": {
+    "scenario": "crm_customer_to_support_user",
+    "mode": "full_schema",
+    "model": "openai/gpt-oss-120b",
+    "fields": [
+      {
+        "targetField": "userId",
+        "proposed": "TRANSFORMATION [customer_id] COPY>REGEX_EXTRACT>CAST",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "externalRef",
+        "proposed": "DIRECT [customer_id] COPY",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "fullName",
+        "proposed": "COMPOSITE [first_name, last_name] JOIN_NONNULL",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "email_address",
+        "proposed": "DIRECT [email] COPY",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "phoneNumber",
+        "proposed": "TRANSFORMATION [phone] COPY>STRIP_PREFIX",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "accountState",
+        "proposed": "TRANSFORMATION [status] COPY>MAP_ENUM",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "tier",
+        "proposed": "TRANSFORMATION [segment] COPY>MAP_ENUM",
+        "matchesAnswerKey": true
+      },
+      {
+        "targetField": "createdAt",
+        "proposed": "TRANSFORMATION [created_at] COPY>FORMAT_DATETIME",
+        "matchesAnswerKey": true
+      }
+    ]
+  }
+}

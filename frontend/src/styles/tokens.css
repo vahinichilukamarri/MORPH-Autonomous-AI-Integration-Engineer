@@ -1,0 +1,114 @@
+/* MORPH design tokens. Colour pairs used for text are checked for WCAG AA by
+   scripts/contrast.test.ts; add a pair there when you add a text colour. */
+
+:root {
+  /* Type */
+  --font-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2.25rem;
+  --leading-tight: 1.15;
+  --leading-normal: 1.45;
+  --tracking-caps: 0.08em;
+
+  /* Spacing (4 px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Radii */
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-3: 8px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 360ms;
+
+  /* Layout */
+  --sidebar-width: 13.5rem;
+  --topbar-height: 3rem;
+
+  color-scheme: dark;
+
+  /* Colour: dark (default) */
+  --bg: #090c11;
+  --surface-1: #0e131a;
+  --surface-2: #141a23;
+  --surface-3: #1b2330;
+  --line: #243041;
+  --line-strong: #34445a;
+  --text: #e2e8f0;
+  --text-muted: #9aa7b8;
+  --text-faint: #8693a5;
+  --accent: #5cc8e0;
+  --accent-ink: #061218;
+  --focus: #ffd166;
+
+  --ok: #4fd18f;
+  --fail: #ff7272;
+  --human: #f5b642;
+  --blocked: #b49cff;
+  --incorrect: #ff80c8;
+  --skipped: #8e9bad;
+  --fixture: #f5b642;
+
+  --ok-bg: rgb(79 209 143 / 0.12);
+  --fail-bg: rgb(255 114 114 / 0.12);
+  --human-bg: rgb(245 182 66 / 0.12);
+  --blocked-bg: rgb(180 156 255 / 0.12);
+  --incorrect-bg: rgb(255 128 200 / 0.12);
+  --skipped-bg: rgb(125 138 156 / 0.12);
+  --accent-bg: rgb(92 200 224 / 0.12);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eef1f5;
+  --surface-1: #ffffff;
+  --surface-2: #f6f8fa;
+  --surface-3: #e9edf2;
+  --line: #d3dae3;
+  --line-strong: #aeb9c6;
+  --text: #111821;
+  --text-muted: #48566a;
+  --text-faint: #5b6879;
+  --accent: #0a6a80;
+  --accent-ink: #ffffff;
+  --focus: #b35c00;
+
+  --ok: #17703f;
+  --fail: #b8262b;
+  --human: #855400;
+  --blocked: #5d3bc9;
+  --incorrect: #a8226e;
+  --skipped: #5b6879;
+  --fixture: #855400;
+
+  --ok-bg: rgb(23 112 63 / 0.1);
+  --fail-bg: rgb(184 38 43 / 0.1);
+  --human-bg: rgb(133 84 0 / 0.1);
+  --blocked-bg: rgb(93 59 201 / 0.1);
+  --incorrect-bg: rgb(168 34 110 / 0.1);
+  --skipped-bg: rgb(91 104 121 / 0.1);
+  --accent-bg: rgb(10 106 128 / 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

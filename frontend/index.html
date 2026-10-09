@@ -1,12 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MORPH: an autonomous integration engineer. Recorded pipeline runs, repair attempts and results." />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource/ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-400-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2" />
     <title>MORPH</title>
+    <script>
+      // Apply the saved theme before first paint; storage can be unavailable.
+      try {
+        if (localStorage.getItem('morph.theme') === 'light') document.documentElement.dataset.theme = 'light'
+      } catch (e) {}
+    </script>
   </head>
   <body>
+    <noscript>MORPH needs JavaScript to show the recorded runs.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
