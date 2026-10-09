@@ -39,6 +39,9 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run alembic upgrade head
+      # The active policy must match policy.lock, released versions must be unchanged, and the floor
+      # must not be weakened.
+      - run: uv run python -m app.policy.check
       - run: uv run pytest -q
 
   mock-systems:

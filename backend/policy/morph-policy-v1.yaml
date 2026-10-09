@@ -1,0 +1,67 @@
+# MORPH tool policy, version 1. Default deny. The floor (app/policy/floor.py) sits under this file
+# and cannot be weakened by it. A released version never changes: a change is a new file, a new
+# lock and a new entry in versions.json. See docs/policy.md.
+version: v1
+description: >-
+  Readers may read. Operators may ingest, generate, test and repair; any model call on data that is
+  not marked synthetic needs a human approval. Per-session budgets cap model calls and sandbox runs,
+  including those made inside a repair run.
+session_limits:
+  max_model_calls: 12
+  max_sandbox_runs: 40
+  max_result_bytes: 200000
+rules:
+  - id: P01-read-any-role
+    decision: allow
+    reason: READ_ALLOWED
+    description: Read-only tools are open to both roles.
+    match:
+      effects: [READ]
+      roles: [reader, operator]
+  - id: P02-operator-ingest
+    decision: allow
+    reason: ALLOWED_BY_RULE
+    description: An operator may ingest a contract file from the spec root.
+    match:
+      tools: [ingest_contract]
+      roles: [operator]
+  - id: P03-operator-generate-without-model
+    decision: allow
+    reason: ALLOWED_BY_RULE
+    description: An operator may generate with the deterministic generator (condition D).
+    match:
+      tools: [generate_integration]
+      roles: [operator]
+      model_involved: false
+  - id: P04-operator-run-tests
+    decision: allow
+    reason: ALLOWED_BY_RULE
+    description: An operator may run the generated tests in the sandbox.
+    match:
+      tools: [run_generated_tests]
+      roles: [operator]
+  - id: P05-operator-model-synthetic
+    decision: allow
+    reason: ALLOWED_BY_RULE
+    description: An operator may use the model on systems whose data is marked synthetic.
+    match:
+      tools: [propose_mapping, generate_integration, repair_integration]
+      roles: [operator]
+      model_involved: true
+      data_classes: [synthetic]
+  - id: P06-model-other-data-needs-approval
+    decision: needs_approval
+    reason: MODEL_DATA_NOT_SYNTHETIC
+    description: A model call on data that is not marked synthetic needs a human approval.
+    match:
+      tools: [propose_mapping, generate_integration, repair_integration]
+      roles: [operator]
+      model_involved: true
+      data_classes: [internal, restricted, unclassified]
+  - id: P07-reader-no-side-effects
+    decision: deny
+    reason: ROLE_NOT_PERMITTED
+    description: A reader may not write, run code or call the model.
+    match:
+      effects: [WRITE_LOCAL, EXECUTE_SANDBOX, MODEL_CALL]
+      roles: [reader]
